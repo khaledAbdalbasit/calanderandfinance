@@ -1,0 +1,13 @@
+{
+  "name": "learning-plan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@netlify/edge-functions": "^4.0.4",
+    "@netlify/identity": "2.0.1"
+  }
+}

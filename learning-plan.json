@@ -1,0 +1,180 @@
+
+{
+  "title": "خطة التطور — 12 أسبوع",
+  "version": 1,
+  "principles": [
+    "مسار أساسي واحد: Backend Engineering باستخدام Java وSpring Boot.",
+    "الإنجليزي مهارة مساندة قصيرة ومتكررة، وليس كورسًا ثانيًا يستهلك اليوم.",
+    "Linux وDocker بالتوازي بقدر ما يخدم المشروع.",
+    "AI وCloud يتوسع فيهما تدريجيًا من خلال مشروع واحد، وليس عدة مسارات متنافسة.",
+    "يوم راحة أسبوعيًا، ولا نحاول تعويض كل ما فات في يوم واحد."
+  ],
+  "weekly_schedule": [
+    {
+      "day": "اليوم 1",
+      "focus": "Java / Spring Boot",
+      "tasks": [
+        "جلسة تعلم مركزة",
+        "تطبيق عملي على الكود"
+      ],
+      "english_minutes": 25
+    },
+    {
+      "day": "اليوم 2",
+      "focus": "Java / Spring Boot",
+      "tasks": [
+        "استكمال التعلم",
+        "حل تمرين أو بناء Feature"
+      ],
+      "english_minutes": 25
+    },
+    {
+      "day": "اليوم 3",
+      "focus": "Linux / Docker + Backend",
+      "tasks": [
+        "Linux أو Networking",
+        "Docker أو تطبيق على المشروع"
+      ],
+      "english_minutes": 0
+    },
+    {
+      "day": "اليوم 4",
+      "focus": "Java / Spring Boot",
+      "tasks": [
+        "جلسة تعلم مركزة",
+        "تطبيق عملي"
+      ],
+      "english_minutes": 25
+    },
+    {
+      "day": "اليوم 5",
+      "focus": "المشروع العملي",
+      "tasks": [
+        "تنفيذ Feature كاملة",
+        "كتابة Tests أو مراجعة الكود"
+      ],
+      "english_minutes": 25
+    },
+    {
+      "day": "اليوم 6",
+      "focus": "مراجعة + فرص العمل",
+      "tasks": [
+        "مراجعة إنجازات الأسبوع",
+        "تقديم على وظائف مناسبة أو تحديث CV",
+        "تخطيط الأسبوع التالي"
+      ],
+      "english_minutes": 15
+    },
+    {
+      "day": "اليوم 7",
+      "focus": "راحة",
+      "tasks": [
+        "راحة بدون مذاكرة إجبارية"
+      ],
+      "english_minutes": 0
+    }
+  ],
+  "roadmap": [
+    {
+      "week": 1,
+      "phase": "Java Core",
+      "goal": "مراجعة Java fundamentals وOOP وCollections",
+      "deliverable": "تمارين صغيرة + GitHub commits"
+    },
+    {
+      "week": 2,
+      "phase": "Java Core",
+      "goal": "Exceptions وGenerics وStreams وLambdas",
+      "deliverable": "تطبيق صغير يستخدم Collections وStreams"
+    },
+    {
+      "week": 3,
+      "phase": "Spring Boot",
+      "goal": "REST APIs وDependency Injection وConfiguration",
+      "deliverable": "أول API منظم"
+    },
+    {
+      "week": 4,
+      "phase": "Spring Boot",
+      "goal": "Validation وException Handling وDTOs",
+      "deliverable": "API مع Validation وGlobal Exception Handler"
+    },
+    {
+      "week": 5,
+      "phase": "Persistence",
+      "goal": "JPA/Hibernate وPostgreSQL والعلاقات",
+      "deliverable": "CRUD وعلاقات صحيحة"
+    },
+    {
+      "week": 6,
+      "phase": "Backend Quality",
+      "goal": "Authentication وAuthorization والاختبارات",
+      "deliverable": "API محمي مع اختبارات أساسية"
+    },
+    {
+      "week": 7,
+      "phase": "Backend Quality",
+      "goal": "Transactions وPagination وQuery performance",
+      "deliverable": "سيناريو معاملات واختبارات له"
+    },
+    {
+      "week": 8,
+      "phase": "Project",
+      "goal": "بناء Inventory & Orders API بصورة متكاملة",
+      "deliverable": "نسخة أولية قابلة للتجربة"
+    },
+    {
+      "week": 9,
+      "phase": "Infrastructure",
+      "goal": "Linux basics وDocker وDocker Compose",
+      "deliverable": "تشغيل المشروع وقاعدة البيانات عبر Compose"
+    },
+    {
+      "week": 10,
+      "phase": "Project",
+      "goal": "Redis أو Background Jobs عند وجود حاجة واضحة",
+      "deliverable": "Feature واحدة محسّنة مع توثيق السبب"
+    },
+    {
+      "week": 11,
+      "phase": "AI introduction",
+      "goal": "ربط API بخدمة LLM وتنفيذ استخدام عملي محدود",
+      "deliverable": "ميزة AI صغيرة مع حدود استخدام واضحة"
+    },
+    {
+      "week": 12,
+      "phase": "Review & deploy",
+      "goal": "اختبارات نهائية وتوثيق ونشر تجريبي ومراجعة المسار",
+      "deliverable": "README واضح + Demo + تقييم ذاتي"
+    }
+  ],
+  "english_plan": {
+    "frequency": "4 إلى 5 مرات أسبوعيًا",
+    "session_minutes": 25,
+    "method": [
+      "استمع لمقطع قصير مرة بدون ترجمة",
+      "اكتب الفكرة والكلمات التي التقطتها",
+      "راجع English subtitles أو transcript",
+      "أعد الاستماع وقلّد جملًا بصوت مرتفع",
+      "مرة أو مرتين أسبوعيًا: تحدث 3–5 دقائق عن مشروعك"
+    ]
+  },
+  "project": {
+    "name": "AI-powered Inventory & Orders API",
+    "description": "مشروع واحد يتطور تدريجيًا: Backend أولًا، ثم جودة واختبارات، ثم تشغيل Docker، ثم ميزة AI صغيرة عند جاهزية الأساس.",
+    "stages": [
+      "Java + Spring Boot + PostgreSQL + REST API",
+      "Validation + Security + Tests + Transactions",
+      "Docker + Docker Compose",
+      "ميزة AI محدودة مرتبطة ببيانات النظام",
+      "Documentation + Demo + Deployment"
+    ]
+  },
+  "tracking": {
+    "completedTasks": [],
+    "weeklyNotes": {},
+    "weeklyHoursTarget": 12,
+    "startDate": "",
+    "currentWeek": 1
+  }
+}
