@@ -134,7 +134,7 @@ function normalizeTaskState(){
  if(!Array.isArray(state.completedTaskIds)){
   const legacy=new Set(state.completedTasks||[]);
   state.completedTaskIds=[];
-  state.tasksByDay.forEach((tasks,di)=>tasks.forEach(task=>{if(legacy.has("d"+di+"t"+tasks.indexOf(task)))state.completedTaskIds.push(task.id)}));
+  state.tasksByDay.forEach((tasks,di)=>tasks.forEach((task,ti)=>{if(legacy.has("d"+di+"t"+ti))state.completedTaskIds.push(task.id)}));
  }
  state.completedTasks=[];
 }
