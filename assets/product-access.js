@@ -52,10 +52,10 @@ export async function getProductAccess(userId) {
 export async function redirectToUserHome(user) {
   const access = await getProductAccess(user.id);
   const destination = access.finance && access.todo
-    ? "/dashboard.html"
+    ? "/dashboard"
     : access.finance
-      ? "/finance.html"
-      : "/learning-plan.html";
+      ? "/finance"
+      : "/learning-plan";
 
   window.location.replace(destination);
 }
@@ -63,7 +63,7 @@ export async function redirectToUserHome(user) {
 export async function requireProduct(product) {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
-    window.location.replace("/index.html");
+    window.location.replace("/");
     return false;
   }
 
@@ -71,7 +71,7 @@ export async function requireProduct(product) {
   try {
     access = await getProductAccess(data.session.user.id);
   } catch {
-    window.location.replace("/offline.html");
+    window.location.replace("/offline");
     return false;
   }
 
