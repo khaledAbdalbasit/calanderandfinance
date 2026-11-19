@@ -1,29 +1,27 @@
 import { supabase } from "./supabase.js";
+import {
+  getCachedPlan,
+  putCachedPlan,
+  queueOfflineChange,
+  getPendingChanges,
+  syncOfflineQueue
+} from "./offline-store.js";
 
 let currentUserId = null;
 let saveTimer = null;
 let channel = null;
-let latestState = null;
 
-async function savePlanNow(state) {
-  if (!currentUserId) return;
-  const { error } = await supabase
-    .from("user_learning_plans")
-    .upsert(
-      { user_id: currentUserId, plan_data: state },
-      { onConflict: "user_id" }
-    );
-
-  if (error) throw error;
-  latestState = null;
+async function syncPlan() {
+  if (!currentUserId || !navigator.onLine) return;
+  try {
+    await syncOfflineQueue(supabase, currentUserId);
+  } catch (error) {
+    console.error("Cloud plan sync failed:", error);
+  }
 }
 
-window.addEventListener("online", () => {
-  if (!latestState || !currentUserId) return;
-  savePlanNow(latestState).catch(error => {
-    console.error("Cloud plan sync retry failed:", error);
-  });
-});
+window.addEventListener("app-online", syncPlan);
+window.addEventListener("online", syncPlan);
 
 export async function loadPlanState(localState, onRemoteUpdate) {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -32,67 +30,66 @@ export async function loadPlanState(localState, onRemoteUpdate) {
   }
 
   currentUserId = session.user.id;
+  const cached = await getCachedPlan(currentUserId);
+  let initialState = cached?.state || localState;
+  const pending = await getPendingChanges(currentUserId);
+  const hasPendingPlan = pending.some(item => item.type === "plan-upsert");
 
-  const { data: productAccess, error: accessError } = await supabase
-    .from("user_products")
-    .select("todo_enabled")
-    .eq("user_id", currentUserId)
-    .maybeSingle();
+  if (navigator.onLine) {
+    await syncPlan();
+    const remaining = await getPendingChanges(currentUserId);
+    const stillHasPendingPlan = remaining.some(item => item.type === "plan-upsert");
+    if (!stillHasPendingPlan) {
+      const { data, error } = await supabase
+        .from("user_learning_plans")
+        .select("plan_data")
+        .eq("user_id", currentUserId)
+        .maybeSingle();
 
-  if (accessError || !productAccess?.todo_enabled) {
-    throw accessError || new Error("هذا الحساب لا يملك صلاحية استخدام To-Do List.");
-  }
-
-  const { data, error } = await supabase
-    .from("user_learning_plans")
-    .select("plan_data")
-    .eq("user_id", currentUserId)
-    .maybeSingle();
-
-  let initialState;
-  if (!error && data?.plan_data && typeof data.plan_data === "object") {
-    initialState = { ...localState, ...data.plan_data };
-  } else {
-    initialState = localState;
-    latestState = structuredClone(initialState);
-    if (!error) {
-      try {
-        await savePlanNow(initialState);
-      } catch (saveError) {
-        console.error("Initial cloud plan save failed:", saveError);
+      if (!error && data?.plan_data && typeof data.plan_data === "object") {
+        initialState = { ...localState, ...data.plan_data };
+        await putCachedPlan(currentUserId, initialState);
+      } else if (error) {
+        console.error("Cloud plan load failed; using local copy:", error);
       }
-    } else {
-      console.error("Cloud plan load failed; using local copy:", error);
     }
   }
 
-  channel = supabase
-    .channel(`learning-plan-${currentUserId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "user_learning_plans",
-        filter: `user_id=eq.${currentUserId}`
-      },
-      payload => {
-        if (payload.eventType === "DELETE" || !payload.new?.plan_data) return;
-        onRemoteUpdate(payload.new.plan_data);
-      }
-    )
-    .subscribe();
+  if (!cached && !hasPendingPlan) await putCachedPlan(currentUserId, initialState);
+
+  if (navigator.onLine) {
+    channel = supabase
+      .channel(`learning-plan-${currentUserId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_learning_plans",
+          filter: `user_id=eq.${currentUserId}`
+        },
+        async payload => {
+          if (payload.eventType === "DELETE" || !payload.new?.plan_data) return;
+          const queue = await getPendingChanges(currentUserId);
+          if (queue.some(item => item.type === "plan-upsert")) return;
+          initialState = payload.new.plan_data;
+          await putCachedPlan(currentUserId, initialState);
+          onRemoteUpdate(initialState);
+        }
+      )
+      .subscribe();
+  }
 
   return initialState;
 }
 
 export function queuePlanSave(state) {
   if (!currentUserId) return;
+  const snapshot = structuredClone(state);
   clearTimeout(saveTimer);
-  latestState = structuredClone(state);
-  saveTimer = setTimeout(() => {
-    savePlanNow(latestState).catch(error => {
-      console.error("Cloud plan sync failed:", error);
-    });
-  }, 700);
+  saveTimer = setTimeout(async () => {
+    await putCachedPlan(currentUserId, snapshot);
+    await queueOfflineChange(`plan:${currentUserId}`, currentUserId, "plan-upsert", snapshot);
+    if (navigator.onLine) await syncPlan();
+  }, 0);
 }
