@@ -104,7 +104,8 @@ self.addEventListener("fetch", event => {
       const pageKey = getNavigationCacheKey(url);
 
       try {
-        const response = await fetch(request);
+        const navigationRequest = new Request(request, { redirect: "follow" });
+        const response = await fetch(navigationRequest);
 
         if (response.ok) {
           try {
