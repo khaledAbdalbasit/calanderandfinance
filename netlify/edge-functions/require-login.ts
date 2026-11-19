@@ -12,7 +12,7 @@ export default async function requireLogin(request: Request, context: Context) {
     }
     return new Response(null, {
       status: 302,
-      headers: { ...headers, Location: new URL('/index.html', request.url).href },
+      headers: { ...headers, Location: new URL('/', request.url).href },
     });
   }
   const response = await context.next();
