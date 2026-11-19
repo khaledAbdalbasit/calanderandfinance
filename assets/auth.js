@@ -105,7 +105,7 @@ async function authenticate(action) {
         password,
         options: {
           data: { products },
-          emailRedirectTo: `${window.location.origin}/index.html`
+          emailRedirectTo: `${window.location.origin}/`
         }
       });
       if (error) throw error;
