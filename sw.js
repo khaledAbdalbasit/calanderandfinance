@@ -1,4 +1,4 @@
-const CACHE_NAME = "personal-dashboard-v4";
+const CACHE_NAME = "personal-dashboard-v5";
 const CACHE_PREFIX = "personal-dashboard-";
 const APP_SHELL = [
   "/index.html",
@@ -22,14 +22,23 @@ const APP_SHELL = [
 
 function getNavigationCacheKey(url) {
   let pathname = url.pathname || "/";
+  if (pathname.endsWith("/") && pathname !== "/") pathname = pathname.slice(0, -1);
 
-  if (pathname === "/") {
-    pathname = "/index.html";
-  } else if (pathname.endsWith("/")) {
-    pathname += "index.html";
-  }
+  const routeAliases = {
+    "/": "/index.html",
+    "/index.html": "/index.html",
+    "/dashboard": "/dashboard.html",
+    "/dashboard.html": "/dashboard.html",
+    "/finance": "/finance.html",
+    "/finance.html": "/finance.html",
+    "/learning-plan": "/learning-plan.html",
+    "/learning-plan.html": "/learning-plan.html",
+    "/offline": "/offline.html",
+    "/offline.html": "/offline.html"
+  };
 
-  return new URL(pathname, self.location.origin);
+  const canonicalPath = routeAliases[pathname] || pathname;
+  return new URL(canonicalPath, self.location.origin);
 }
 
 async function getCachedNavigation(cache, pageKey) {
