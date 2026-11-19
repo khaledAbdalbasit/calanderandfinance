@@ -9,7 +9,7 @@ const financeProduct = document.getElementById("financeProduct");
 async function requireSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
-    window.location.replace("/index.html");
+    window.location.replace("/");
     return false;
   }
 
@@ -21,15 +21,15 @@ async function requireSession() {
 
     if (access.finance && access.todo) return true;
     if (access.finance) {
-      window.location.replace("/finance.html");
+      window.location.replace("/finance");
       return false;
     }
     if (access.todo) {
-      window.location.replace("/learning-plan.html");
+      window.location.replace("/learning-plan");
       return false;
     }
 
-    window.location.replace("/index.html");
+    window.location.replace("/");
     return false;
   } catch {
     status.textContent = "تعذر تحميل صلاحيات المنتجات. افتح التطبيق بالإنترنت مرة واحدة لتجهيز وضع Offline.";
@@ -46,7 +46,7 @@ signOutButton.addEventListener("click", async () => {
     signOutButton.disabled = false;
     return;
   }
-  window.location.replace("/index.html");
+  window.location.replace("/");
 });
 
 await requireSession();
