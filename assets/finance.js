@@ -1,6 +1,6 @@
 import { supabase } from "./supabase.js";
 import { requireProduct } from "./product-access.js";
-import { getCachedRows, putCachedRow, deleteCachedRow, queueOfflineChange, syncOfflineQueue } from "./offline-store.js";
+import { getCachedRows, putCachedRow, deleteCachedRow, queueOfflineChange, getPendingChanges, syncOfflineQueue } from "./offline-store.js";
 
 if (await requireProduct("finance")) {
 
@@ -253,9 +253,16 @@ async function loadBudgets() {
       .eq("user_id", state.userId).eq("budget_month", selectedMonth() + 1)
       .eq("budget_year", selectedYear()).order("category");
     if (error) throw error;
-    state.budgets = data || [];
-    await Promise.all(state.budgets.map(row => putCachedRow("budgets", row)));
-    $("budgetError").textContent = "";
+    const pending = await getPendingChanges(state.userId);
+    const pendingUpserts = pending.filter(item => item.type === "budget-upsert").map(item => item.payload);
+    const pendingDeletes = new Set(pending.filter(item => item.type === "budget-delete").map(item => item.payload.id));
+    const pendingIds = new Set(pendingUpserts.map(item => item.id));
+    state.budgets = [
+      ...(data || []).filter(item => !pendingDeletes.has(item.id) && !pendingIds.has(item.id)),
+      ...pendingUpserts.filter(item => item.budget_month === selectedMonth() + 1 && item.budget_year === selectedYear())
+    ];
+    await Promise.all((data || []).map(row => putCachedRow("budgets", row)));
+    $("budgetError").textContent = pending.length ? "بعض التغييرات ما زالت تنتظر المزامنة." : "";
   } catch (error) {
     console.error("Budget load failed; local cache remains active:", error);
     $("budgetError").textContent = "تعذر الاتصال — بنستخدم آخر نسخة محفوظة.";
@@ -451,10 +458,16 @@ async function loadTransactions() {
     const { data, error } = await supabase.from("finance_transactions").select("*")
       .eq("user_id", state.userId).order("transaction_date", { ascending: false });
     if (error) throw error;
-    state.transactions = data || [];
-    await Promise.all(state.transactions.map(row => putCachedRow("transactions", row)));
+    const pending = await getPendingChanges(state.userId);
+    const pendingUpserts = pending.filter(item => item.type === "transaction-upsert").map(item => item.payload);
+    const pendingDeletes = new Set(pending.filter(item => item.type === "transaction-delete").map(item => item.payload.id));
+    const pendingIds = new Set(pendingUpserts.map(item => item.id));
+    state.transactions = [
+      ...(data || []).filter(item => !pendingDeletes.has(item.id) && !pendingIds.has(item.id)),
+      ...pendingUpserts
+    ];
+    await Promise.all((data || []).map(row => putCachedRow("transactions", row)));
     fillFilters(); renderSuggestions(); render();
-    const pending = await (await import("./offline-store.js")).getPendingChanges(state.userId);
     setStatus(pending.length ? "تم تحميل البيانات، وهناك تغييرات تنتظر المزامنة." : "تم تحميل " + state.transactions.length + " عملية.");
   } catch (error) {
     console.error("Finance load failed; local cache remains active:", error);
