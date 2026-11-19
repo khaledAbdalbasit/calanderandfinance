@@ -8,7 +8,11 @@ const WEEK_MS = 7 * DAY_MS;
 function normalizeTemplate(state, plan) {
   const legacyCompleted = state.completedTaskIds || state.completedTasks || [];
   if (legacyCompleted.length && !state.legacyProgress && !state.weekCycles?.length) {
-    state.legacyProgress = { completedItems: legacyCompleted.length, preservedAt: new Date().toISOString() };
+    state.legacyProgress = {
+      completedTaskIds: Array.isArray(state.completedTaskIds) ? [...state.completedTaskIds] : [],
+      completedTasks: Array.isArray(state.completedTasks) ? [...state.completedTasks] : [],
+      preservedAt: new Date().toISOString()
+    };
   }
   const source = Array.isArray(state.weeklyTemplate)
     ? state.weeklyTemplate
