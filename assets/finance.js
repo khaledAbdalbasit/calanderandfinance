@@ -15,8 +15,9 @@ function localDate(date) {
 function selectedYear() { return Number($("yearFilter").value); }
 function selectedMonth() { return Number($("monthFilter").value); }
 function isInSelectedPeriod(tx) {
+  if (state.allTime) return true;
   const date = new Date(tx.transaction_date + "T00:00:00");
-  return date.getFullYear() === selectedYear() && (state.allTime || date.getMonth() === selectedMonth());
+  return date.getFullYear() === selectedYear() && date.getMonth() === selectedMonth();
 }
 function sum(list, type) { return list.filter(tx => tx.type === type).reduce((total, tx) => total + Number(tx.amount), 0); }
 function setStatus(message, error = false) {
@@ -127,7 +128,11 @@ function renderCategories(list) {
 function renderYearComparison() {
   const year = selectedYear();
   const yearData = state.transactions.filter(tx => Number(tx.transaction_date.slice(0,4)) === year);
-  const max = Math.max(1, ...yearData.map(tx => Number(tx.amount)));
+  const monthlyTotals = monthNames.map((_, month) => {
+    const items = yearData.filter(tx => new Date(tx.transaction_date + "T00:00:00").getMonth() === month);
+    return Math.max(sum(items, "income"), sum(items, "expense"));
+  });
+  const max = Math.max(1, ...monthlyTotals);
   $("yearComparison").replaceChildren();
   monthNames.forEach((name, month) => {
     const items = yearData.filter(tx => new Date(tx.transaction_date + "T00:00:00").getMonth() === month);
