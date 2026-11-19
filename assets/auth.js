@@ -1,68 +1,101 @@
+import { supabase } from "./supabase.js";
+
 const $ = id => document.getElementById(id);
-const form = $('authForm');
-const status = $('authStatus');
-let identity;
-let currentUser = null;
+const form = $("authForm");
+const status = $("authStatus");
+const signInButton = $("signInBtn");
+const signUpButton = $("signUpBtn");
+const signOutButton = $("signOutBtn");
 let busy = false;
 
 function message(text, error = false) {
   status.textContent = text;
-  status.style.color = error ? 'var(--red)' : '';
-}
-
-function renderUser(user) {
-  currentUser = user;
-  $('authFields').hidden = !!user;
-  $('signInBtn').hidden = !!user;
-  $('signUpBtn').hidden = !!user;
-  $('signOutBtn').hidden = !user;
-  // Hidden login fields must not block signing out.
-  $('authEmail').required = !user;
-  $('authPassword').required = !user;
-  message(user ? `تم تسجيل الدخول: ${user.email}` : 'يمكنك تسجيل الدخول أو إنشاء حساب جديد.');
-  if (user) window.location.replace('/learning-plan.html');
+  status.style.color = error ? "var(--red)" : "";
 }
 
 function setBusy(value) {
   busy = value;
-  form.setAttribute('aria-busy', String(value));
-  form.querySelectorAll('button, input').forEach(el => { el.disabled = value; });
+  form.setAttribute("aria-busy", String(value));
+  form.querySelectorAll("button, input").forEach(element => {
+    element.disabled = value;
+  });
+}
+
+function renderSession(session) {
+  const user = session?.user ?? null;
+  $("authFields").hidden = Boolean(user);
+  signInButton.hidden = Boolean(user);
+  signUpButton.hidden = Boolean(user);
+  signOutButton.hidden = !user;
+  $("authEmail").required = !user;
+  $("authPassword").required = !user;
+
+  if (user) {
+    message(`تم تسجيل الدخول: ${user.email || ""} — جارٍ فتح خطتك…`);
+    window.location.replace("/learning-plan.html");
+  } else {
+    message("سجّل الدخول أو أنشئ حسابًا جديدًا للوصول إلى خطتك.");
+  }
 }
 
 function showError(error) {
-  const detail = String(error.message || '').toLowerCase();
-  let text = 'تعذر الاتصال بخدمة الحسابات. تحقق من الإنترنت وحاول مرة أخرى.';
-  if (/confirm|verified/.test(detail)) text = 'أكّد بريدك الإلكتروني من رسالة التفعيل قبل تسجيل الدخول، وراجع البريد غير المرغوب فيه.';
-  else if (/already|registered|exists/.test(detail)) text = 'هذا البريد مسجل بالفعل. استخدم تسجيل الدخول.';
-  else if (error.status === 401 || /invalid.*(credentials|password)|invalid_grant/.test(detail)) text = 'البريد الإلكتروني أو كلمة المرور غير صحيحة.';
-  else if (error.status === 403) text = 'إنشاء الحسابات غير متاح حاليًا. حاول مرة أخرى لاحقًا.';
-  else if (error.status === 422 || /password.*(short|least|weak)/.test(detail)) text = 'تحقق من البريد الإلكتروني، واستخدم كلمة مرور من 8 أحرف على الأقل.';
-  else if (error.status === 429 || /rate|too many/.test(detail)) text = 'محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.';
-  else if (/token|expired/.test(detail)) text = 'رابط التفعيل غير صالح أو انتهت صلاحيته. أعد طلب إنشاء الحساب للحصول على رابط جديد.';
+  const detail = String(error?.message || "").toLowerCase();
+  let text = "تعذر الاتصال بخدمة الحسابات. تحقق من الإنترنت وحاول مرة أخرى.";
+
+  if (/invalid login credentials|invalid.*credentials/.test(detail)) {
+    text = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+  } else if (/email not confirmed/.test(detail)) {
+    text = "يجب تأكيد بريدك الإلكتروني من رسالة التفعيل قبل تسجيل الدخول.";
+  } else if (/already registered|user already registered/.test(detail)) {
+    text = "هذا البريد مسجل بالفعل. استخدم تسجيل الدخول.";
+  } else if (/password/.test(detail) && /at least|characters|short|weak/.test(detail)) {
+    text = "كلمة المرور يجب أن تكون 8 أحرف على الأقل.";
+  } else if (/rate limit|too many requests/.test(detail)) {
+    text = "محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.";
+  } else if (/expired|invalid.*token|token.*invalid/.test(detail)) {
+    text = "رابط التفعيل غير صالح أو انتهت صلاحيته. اطلب رابط تفعيل جديدًا.";
+  }
+
   message(text, true);
 }
 
 async function authenticate(action) {
-  if (busy || !identity) return;
-  $('authEmail').value = $('authEmail').value.trim();
+  if (busy) return;
+  $("authEmail").value = $("authEmail").value.trim();
   if (!form.reportValidity()) return;
-  const email = $('authEmail').value;
-  const password = $('authPassword').value;
-  if (action === 'signup' && password.length < 8) {
-    message('استخدم كلمة مرور من 8 أحرف على الأقل لإنشاء الحساب.', true);
+
+  const email = $("authEmail").value;
+  const password = $("authPassword").value;
+
+  if (action === "signup" && password.length < 8) {
+    message("استخدم كلمة مرور من 8 أحرف على الأقل.", true);
     return;
   }
+
   setBusy(true);
-  message(action === 'signup' ? 'جارٍ إنشاء الحساب…' : 'جارٍ تسجيل الدخول…');
+  message(action === "signup" ? "جارٍ إنشاء الحساب…" : "جارٍ تسجيل الدخول…");
+
   try {
-    if (action === 'signup') {
-      await identity.signup(email, password);
-      renderUser(await identity.getUser());
-      if (!currentUser) message('تم إرسال رابط التفعيل إلى بريدك الإلكتروني. افتح الرابط ثم سجّل الدخول، وراجع البريد غير المرغوب فيه.');
+    if (action === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/learning-plan.html`
+        }
+      });
+      if (error) throw error;
+
+      if (data.session) {
+        window.location.replace("/learning-plan.html");
+      } else {
+        message("تم إنشاء الحساب. افتح رسالة التفعيل التي أرسلناها إلى بريدك الإلكتروني، ثم اضغط رابط التأكيد لتفعيل الحساب.");
+        $("authPassword").value = "";
+      }
     } else {
-      renderUser(await identity.login(email, password));
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     }
-    $('authPassword').value = '';
   } catch (error) {
     showError(error);
   } finally {
@@ -70,19 +103,21 @@ async function authenticate(action) {
   }
 }
 
-form.addEventListener('submit', event => {
+form.addEventListener("submit", event => {
   event.preventDefault();
-  authenticate('login');
+  authenticate("login");
 });
-$('signUpBtn').addEventListener('click', () => authenticate('signup'));
-$('signOutBtn').addEventListener('click', async () => {
-  if (busy || !identity) return;
+signUpButton.addEventListener("click", () => authenticate("signup"));
+
+signOutButton.addEventListener("click", async () => {
+  if (busy) return;
   setBusy(true);
   try {
-    await identity.logout();
-    renderUser(null);
-    $('authPassword').value = '';
-    message('تم تسجيل الخروج. تقدم الخطة ما زال محفوظًا في هذا المتصفح.');
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    message("تم تسجيل الخروج.");
+    $("authPassword").value = "";
+    renderSession(null);
   } catch (error) {
     showError(error);
   } finally {
@@ -90,13 +125,20 @@ $('signOutBtn').addEventListener('click', async () => {
   }
 });
 
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (session) renderSession(session);
+});
+
 try {
-  identity = await import('./netlify-identity.js');
-  identity.onAuthChange((_event, user) => renderUser(user));
-  await identity.handleAuthCallback();
-  renderUser(await identity.getUser());
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (data.session) {
+    renderSession(data.session);
+  } else {
+    message("سجّل الدخول أو أنشئ حسابًا جديدًا للوصول إلى خطتك.");
+  }
 } catch (error) {
   showError(error);
 } finally {
-  if (identity) setBusy(false);
+  setBusy(false);
 }
