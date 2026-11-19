@@ -387,6 +387,7 @@ function startEdit(tx) {
   $("formTitle").textContent = "تعديل العملية";
   $("saveTransaction").textContent = "حفظ التعديلات";
   $("cancelEdit").hidden = false;
+  document.querySelector('.finance-tab[data-view="add"]').click();
   $("transactionForm").scrollIntoView({behavior:"smooth", block:"start"});
 }
 function resetTransactionForm() {
