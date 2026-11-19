@@ -23,7 +23,7 @@ async function syncPlan() {
 window.addEventListener("app-online", syncPlan);
 window.addEventListener("online", syncPlan);
 
-export async function loadPlanState(localState, onRemoteUpdate) {
+export async function loadPlanState(localState, onRemoteUpdate, preferLocal = false) {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session?.user) {
     throw sessionError || new Error("يجب تسجيل الدخول أولًا.");
@@ -31,7 +31,7 @@ export async function loadPlanState(localState, onRemoteUpdate) {
 
   currentUserId = session.user.id;
   const cached = await getCachedPlan(currentUserId);
-  let initialState = cached?.state || localState;
+  let initialState = preferLocal || !cached ? localState : cached.state;
   const pending = await getPendingChanges(currentUserId);
   const hasPendingPlan = pending.some(item => item.type === "plan-upsert");
 
