@@ -29,7 +29,7 @@ test('anonymous, invalid, expired, and valid sessions are enforced before servin
   try {
     const anonymous = await requireLogin(request, context);
     assert.equal(anonymous.status, 302);
-    assert.equal(anonymous.headers.get('Location'), 'https://example.com/index.html');
+    assert.equal(anonymous.headers.get('Location'), 'https://example.com/');
     assert.equal(served, 0);
     assert.equal(verified, 0);
 
