@@ -534,7 +534,7 @@ async function init() {
     maintainWeeklyCycle();
     localStorage.setItem("learningPlanState", JSON.stringify(state));
     render();
-  });
+  }, Boolean(saved));
 
   initializeWeeklyCycles(state, plan);
   advanceWeeklyCycles(state);
