@@ -532,7 +532,7 @@ async function init() {
     state = { ...defaultState(plan), ...remoteState };
     initializeWeeklyCycles(state, plan);
     maintainWeeklyCycle();
-    localStorage.setItem("learningPlanState", JSON.stringify(state));
+    if (localStorageKey) localStorage.setItem(localStorageKey, JSON.stringify(state));
     render();
   }, Boolean(saved));
 
