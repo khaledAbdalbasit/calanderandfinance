@@ -3,6 +3,8 @@ import { getProductAccess } from "./product-access.js";
 
 const status = document.getElementById("status");
 const signOutButton = document.getElementById("signOut");
+const todoProduct = document.getElementById("todoProduct");
+const financeProduct = document.getElementById("financeProduct");
 
 async function requireSession() {
   const { data, error } = await supabase.auth.getSession();
@@ -13,21 +15,24 @@ async function requireSession() {
 
   try {
     const access = await getProductAccess(data.session.user.id);
-    if (access.finance && !access.todo) {
+
+    todoProduct.hidden = !access.todo;
+    financeProduct.hidden = !access.finance;
+
+    if (access.finance && access.todo) return true;
+    if (access.finance) {
       window.location.replace("/finance.html");
       return false;
     }
-    if (access.todo && !access.finance) {
+    if (access.todo) {
       window.location.replace("/learning-plan.html");
       return false;
     }
-    if (!access.finance && !access.todo) {
-      window.location.replace("/index.html");
-      return false;
-    }
-    return true;
+
+    window.location.replace("/index.html");
+    return false;
   } catch {
-    status.textContent = "تعذر تحميل صلاحيات المنتجات. شغّل ملف user-products-schema.sql في Supabase.";
+    status.textContent = "تعذر تحميل صلاحيات المنتجات. افتح التطبيق بالإنترنت مرة واحدة لتجهيز وضع Offline.";
     return false;
   }
 }

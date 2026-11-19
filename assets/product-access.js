@@ -2,14 +2,38 @@ import { supabase } from "./supabase.js";
 
 const cacheKey = userId => `productAccess:${userId}`;
 
-export async function getProductAccess(userId) {
+function readCachedAccess(userId) {
   try {
-    const { data, error } = await supabase
+    const raw = localStorage.getItem(cacheKey(userId));
+    if (!raw) return null;
+    const access = JSON.parse(raw);
+    if (typeof access?.finance !== "boolean" || typeof access?.todo !== "boolean") return null;
+    return access;
+  } catch {
+    return null;
+  }
+}
+
+export async function getProductAccess(userId) {
+  const cached = readCachedAccess(userId);
+
+  if (!navigator.onLine) {
+    if (cached) return cached;
+    throw new Error("Product access is not cached for offline use.");
+  }
+
+  try {
+    const query = supabase
       .from("user_products")
       .select("finance_enabled,todo_enabled")
       .eq("user_id", userId)
       .maybeSingle();
 
+    const timeout = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Product access request timed out.")), 5000);
+    });
+
+    const { data, error } = await Promise.race([query, timeout]);
     if (error) throw error;
     if (!data) throw new Error("Product access is not configured for this account.");
 
@@ -20,9 +44,8 @@ export async function getProductAccess(userId) {
     localStorage.setItem(cacheKey(userId), JSON.stringify(access));
     return access;
   } catch (error) {
-    const cached = localStorage.getItem(cacheKey(userId));
-    if (!cached) throw error;
-    return JSON.parse(cached);
+    if (cached) return cached;
+    throw error;
   }
 }
 
@@ -48,12 +71,12 @@ export async function requireProduct(product) {
   try {
     access = await getProductAccess(data.session.user.id);
   } catch {
-    window.location.replace("/index.html?productAccess=setup");
+    window.location.replace("/offline.html");
     return false;
   }
 
   if (!access[product]) {
-    window.location.replace("/dashboard.html");
+    await redirectToUserHome(data.session.user);
     return false;
   }
 
