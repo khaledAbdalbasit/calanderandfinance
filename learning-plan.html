@@ -65,7 +65,7 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
 
 <div class="grid">
  <div class="stat"><small>إنجاز المهام</small><strong id="doneCount">0 / 0</strong><div class="progress"><div class="bar" id="overallBar"></div></div></div>
- <div class="stat"><small>الأسبوع الحالي</small><strong id="currentWeek">1 / 12</strong><small>عدّله من إعدادات الخطة</small></div>
+ <div class="stat"><small>الأسبوع الحالي</small><strong id="currentWeek">1 / 12</strong><small>يُحسب من تاريخ بدء الأسبوع</small></div>
  <div class="stat"><small>هدف ساعات الأسبوع</small><strong id="hoursTarget">12</strong><small>ساعة — قابل للتعديل</small></div>
  <div class="stat"><small>المسار الأساسي</small><strong style="font-size:19px">Backend</strong><small>Java + Spring Boot</small></div>
 </div>
@@ -89,7 +89,7 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
  <div class="card"><h3>أداء كل أسبوع</h3><p class="muted">النسبة هنا تقيس المهام التي أُنجزت قبل نهاية أسبوعها الأصلي، وليس المهام التي أُنجزت لاحقًا.</p><div id="weeklyStats"></div></div>
 </section>
 <section id="roadmap">
- <h2 class="section-title">خارطة الطريق</h2><p class="muted">كل أسبوع له ناتج عملي. لو اتأخرت، كمل من مكانك بدل ما تضغط نفسك لتعويض الجدول.</p>
+ <h2 class="section-title">خارطة الطريق</h2><p class="muted">كل أسبوع له ناتج عملي. الجدول الأسبوعي يتجدد، والمهام غير المكتملة تنتقل كمهام متأخرة.</p>
  <div class="cards" id="roadmapList"></div>
 </section>
 <section id="english">
