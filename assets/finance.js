@@ -182,7 +182,7 @@ function renderDailyChart() {
     const button = document.createElement("button"); button.type = "button";
     button.title = item.day + " " + monthNames[month] + ": " + money(item.amount);
     button.setAttribute("aria-label", "عرض مصروفات يوم " + item.day);
-    const bar = document.createElement("span"); bar.className = "day-bar" + (state.selectedDay === item.date ? " selected" : "");
+    const bar = document.createElement("span"); bar.className = "day-bar" + (averageElapsed && item.amount > averageElapsed ? " above-average" : "") + (state.selectedDay === item.date ? " selected" : "");
     bar.style.height = (item.amount ? Math.max(3, item.amount / max * 100) : 2) + "%";
     button.append(bar);
     button.addEventListener("click", () => { state.selectedDay = item.date; renderDailyChart(); });
@@ -200,7 +200,7 @@ function renderDailyChart() {
   const selected = dayTransactions(state.selectedDay);
   const dayExpense = sum(selected, "expense");
   $("selectedDayTitle").textContent = "تفاصيل يوم " + Number(state.selectedDay.slice(-2)) + " " + monthNames[month];
-  $("selectedDayTotal").textContent = "المصروف: " + money(dayExpense);
+  $("selectedDayTotal").textContent = "المصروف: " + money(dayExpense) + (averageElapsed ? (dayExpense > averageElapsed ? " · أعلى من المتوسط" : " · أقل من المتوسط") : "");
   const target = $("selectedDayTransactions"); target.replaceChildren();
   if (!selected.length) {
     target.innerHTML = '<div class="empty">مفيش عمليات مسجلة في اليوم ده.</div>';
