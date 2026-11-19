@@ -29,6 +29,23 @@ textarea{min-height:90px;resize:vertical}.field{margin:12px 0}.field label{displ
 .notice{border-right:3px solid var(--yellow);padding:9px 12px;background:#201e19;border-radius:8px;color:#f5dfad;margin:14px 0}
 ul{padding-right:22px}.empty{color:var(--muted);padding:15px;text-align:center}
 footer{color:var(--muted);font-size:12px;margin-top:24px}
+body{background:radial-gradient(ellipse at 12% 8%,rgba(61,111,190,.24),transparent 38%),radial-gradient(ellipse at 88% 30%,rgba(65,191,163,.13),transparent 34%),linear-gradient(145deg,#07101f,#0c1930 55%,#101b30)}
+.stat,.card{background:linear-gradient(145deg,rgba(25,40,64,.78),rgba(14,25,43,.72));border:1px solid rgba(154,190,236,.16);box-shadow:0 14px 40px rgba(0,0,0,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.stat{border-radius:20px;padding:19px}.card{border-radius:20px}
+button,.filebtn{background:rgba(31,49,76,.72);border-color:rgba(154,190,236,.2);transition:transform .18s ease,border-color .18s ease,background .18s ease}
+button:hover,.filebtn:hover{transform:translateY(-1px);border-color:rgba(115,167,255,.65)}
+button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:rgba(142,190,255,.45)}
+.tabs{padding:5px;border:1px solid rgba(154,190,236,.13);border-radius:16px;background:rgba(9,19,34,.48);backdrop-filter:blur(14px)}
+.tab{border-color:transparent;background:transparent}.tab.active{background:rgba(50,99,160,.65);border-color:rgba(115,167,255,.35)}
+.task{gap:10px;align-items:center;padding:10px 0;border-bottom-color:rgba(154,190,236,.1)}
+.task-copy{flex:1;min-width:0}.task-actions{display:flex;gap:5px;opacity:.72}
+.task-actions button{padding:4px 8px;font-size:12px;border-radius:8px}
+.task-add{margin-top:12px;width:100%;border-style:dashed;color:#a9caff;background:rgba(41,76,119,.18)}
+.task.done .task-copy{text-decoration:line-through;color:var(--muted)}
+.task-dialog{width:min(440px,calc(100% - 28px));border:1px solid rgba(154,190,236,.25);border-radius:20px;padding:22px;background:rgba(13,25,43,.96);color:var(--text);box-shadow:0 24px 80px #0009}
+.task-dialog::backdrop{background:rgba(1,7,16,.68);backdrop-filter:blur(5px)}
+.task-dialog h3{margin:0 0 12px}.task-dialog input{width:100%;background:#091526;border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--text);font:inherit}
+.dialog-actions{display:flex;gap:8px;justify-content:flex-start;margin-top:16px}
 @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}.two{grid-template-columns:1fr}.wrap{padding:18px 12px 45px}}
 </style>
 </head>
@@ -88,7 +105,14 @@ footer{color:var(--muted);font-size:12px;margin-top:24px}
  </div>
  <div class="card" style="margin-top:12px"><h3>مبادئ ثابتة</h3><ul id="principles"></ul></div>
 </section>
-<footer>تقدمك وملاحظاتك تتم مزامنتها تلقائيًا مع حسابك. استخدم «تصدير التقدم JSON» للاحتفاظ بنسخة احتياطية.</footer>
+<dialog class="task-dialog" id="taskDialog">
+ <form id="taskForm">
+  <h3 id="taskDialogTitle">إضافة مهمة</h3>
+  <label class="field"><span class="muted">اسم المهمة</span><input id="taskTitle" type="text" maxlength="180" required placeholder="اكتب المهمة هنا..."></label>
+  <div class="dialog-actions"><button class="primary" type="submit">حفظ المهمة</button><button type="button" id="cancelTask">إلغاء</button></div>
+ </form>
+</dialog>
+<footer>تقدمك وملاحظاتك ومهامك تتم مزامنتها تلقائيًا مع حسابك. استخدم «تصدير التقدم JSON» للاحتفاظ بنسخة احتياطية.</footer>
 </div>
 <script type="module">
 import { loadPlanState, queuePlanSave } from "./assets/plan-sync.js";
@@ -100,7 +124,26 @@ let plan=null, state=null;
 const $=id=>document.getElementById(id);
 function defaultState(p){return JSON.parse(JSON.stringify(p.tracking||{completedTasks:[],weeklyNotes:{},weeklyHoursTarget:12,startDate:"",currentWeek:1}));}
 function save(){localStorage.setItem("learningPlanState",JSON.stringify(state));queuePlanSave(state);}
-function taskId(day,i){return "d"+day+"t"+i}
+function makeTaskId(){return window.crypto?.randomUUID?.()||("task-"+Date.now()+"-"+Math.random().toString(36).slice(2));}
+function normalizeTaskState(){
+ if(!Array.isArray(state.tasksByDay)) state.tasksByDay=plan.weekly_schedule.map((day,di)=>day.tasks.map((text,ti)=>({id:"d"+di+"t"+ti,text})));
+ state.tasksByDay=state.tasksByDay.map((tasks,di)=>(Array.isArray(tasks)?tasks:[]).map((task,ti)=>typeof task==="string"?{id:"d"+di+"t"+ti,text:task}:{id:task.id||makeTaskId(),text:String(task.text??"")}));
+ if(!Array.isArray(state.completedTaskIds)){
+  const legacy=new Set(state.completedTasks||[]);
+  state.completedTaskIds=[];
+  state.tasksByDay.forEach((tasks,di)=>tasks.forEach((task,ti)=>{if(legacy.has("d"+di+"t"+ti))state.completedTaskIds.push(task.id)}));
+ }
+ state.completedTasks=[];
+}
+let editingTask=null;
+function openTaskDialog(dayIndex,taskId=null){
+ editingTask={dayIndex,taskId};
+ const task=taskId?state.tasksByDay[dayIndex].find(item=>item.id===taskId):null;
+ $("taskDialogTitle").textContent=task?"تعديل المهمة":"إضافة مهمة";
+ $("taskTitle").value=task?.text||"";
+ $("taskDialog").showModal();
+ $("taskTitle").focus();
+}
 function render(){
  $("title").textContent=plan.title||"خطة التطور";
  $("schedule").innerHTML="";
@@ -108,12 +151,18 @@ function render(){
  plan.weekly_schedule.forEach((d,di)=>{
   let card=document.createElement("div");card.className="card day";
   card.innerHTML=`<span class="tag">${d.english_minutes?`English · ${d.english_minutes} دقيقة`:"حسب الحاجة"}</span><h3>${d.day}</h3><p class="muted">${d.focus}</p>`;
-  d.tasks.forEach((t,ti)=>{let id=taskId(di,ti);total++;if(state.completedTasks.includes(id))done++;
-   let row=document.createElement("label");row.className="task"+(state.completedTasks.includes(id)?" done":"");
-   row.innerHTML=`<input type="checkbox" ${state.completedTasks.includes(id)?"checked":""}><span>${t}</span>`;
-   row.querySelector("input").addEventListener("change",e=>{if(e.target.checked){if(!state.completedTasks.includes(id))state.completedTasks.push(id)}else state.completedTasks=state.completedTasks.filter(x=>x!==id);save();renderStats();row.classList.toggle("done",e.target.checked)});
-   card.appendChild(row);
-  });$("schedule").appendChild(card);
+  state.tasksByDay[di].forEach(task=>{
+   total++;const isDone=state.completedTaskIds.includes(task.id);if(isDone)done++;
+   const row=document.createElement("div");row.className="task"+(isDone?" done":"");
+   const checkbox=document.createElement("input");checkbox.type="checkbox";checkbox.checked=isDone;checkbox.dataset.taskId=task.id;checkbox.dataset.day=di;checkbox.setAttribute("aria-label","تحديد إنجاز المهمة");
+   const copy=document.createElement("span");copy.className="task-copy";copy.textContent=task.text;
+   const actions=document.createElement("div");actions.className="task-actions";
+   const edit=document.createElement("button");edit.type="button";edit.textContent="تعديل";edit.dataset.action="edit-task";edit.dataset.day=di;edit.dataset.taskId=task.id;edit.setAttribute("aria-label","تعديل المهمة");
+   const remove=document.createElement("button");remove.type="button";remove.textContent="حذف";remove.dataset.action="delete-task";remove.dataset.day=di;remove.dataset.taskId=task.id;remove.setAttribute("aria-label","حذف المهمة");
+   actions.append(edit,remove);row.append(checkbox,copy,actions);card.appendChild(row);
+  });
+  const add=document.createElement("button");add.type="button";add.className="task-add";add.textContent="+ إضافة مهمة";add.dataset.action="add-task";add.dataset.day=di;card.appendChild(add);
+  $("schedule").appendChild(card);
  });
  renderStats(total,done);
  $("roadmapList").innerHTML=plan.roadmap.map(w=>`<article class="card week"><div class="weekhead"><h3>الأسبوع ${w.week}: ${w.phase}</h3><strong>${w.week===Number(state.currentWeek)?"أنت هنا":""}</strong></div><p>${w.goal}</p><span class="pill">الناتج: ${w.deliverable}</span></article>`).join("");
@@ -127,16 +176,43 @@ function render(){
 }
 function renderStats(total,done){$("doneCount").textContent=`${done} / ${total}`;$("overallBar").style.width=(total?done/total*100:0)+"%";$("currentWeek").textContent=(state.currentWeek||1)+" / 12";$("hoursTarget").textContent=state.weeklyHoursTarget||12;}
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll("section").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active")}));
+$("schedule").addEventListener("change",event=>{
+ const checkbox=event.target.closest('input[type="checkbox"][data-task-id]');if(!checkbox)return;
+ const id=checkbox.dataset.taskId;
+ if(checkbox.checked){if(!state.completedTaskIds.includes(id))state.completedTaskIds.push(id)}
+ else state.completedTaskIds=state.completedTaskIds.filter(item=>item!==id);
+ save();renderStats();
+});
+$("schedule").addEventListener("click",event=>{
+ const button=event.target.closest("button[data-action]");if(!button)return;
+ const day=Number(button.dataset.day),id=button.dataset.taskId,action=button.dataset.action;
+ if(action==="add-task"){openTaskDialog(day);return}
+ if(action==="edit-task"){openTaskDialog(day,id);return}
+ if(action==="delete-task"&&confirm("متأكد إنك عايز تحذف المهمة دي؟")){
+  state.tasksByDay[day]=state.tasksByDay[day].filter(task=>task.id!==id);
+  state.completedTaskIds=state.completedTaskIds.filter(taskId=>taskId!==id);
+  save();render();
+ }
+});
+$("taskForm").addEventListener("submit",event=>{
+ event.preventDefault();if(!editingTask)return;
+ const text=$("taskTitle").value.trim();if(!text)return;
+ const tasks=state.tasksByDay[editingTask.dayIndex];
+ if(editingTask.taskId){const task=tasks.find(item=>item.id===editingTask.taskId);if(task)task.text=text}
+ else tasks.push({id:makeTaskId(),text});
+ $("taskDialog").close();editingTask=null;save();render();
+});
+$("cancelTask").onclick=()=>{$("taskDialog").close();editingTask=null};
 $("saveSettings").onclick=()=>{state.startDate=$("startDate").value;state.currentWeek=Math.min(12,Math.max(1,Number($("weekInput").value)||1));state.weeklyHoursTarget=Math.max(1,Number($("hoursInput").value)||12);save();render();alert("تم حفظ الإعدادات")};
 $("saveNotes").onclick=()=>{state.weeklyNotes=state.weeklyNotes||{};state.weeklyNotes[state.currentWeek]=$("weeklyNotes").value;state.englishNotes=$("englishNotes").value;save();alert("تم حفظ الملاحظات")};
 $("englishNotes").addEventListener("change",()=>{state.englishNotes=$("englishNotes").value;save()});
 $("exportBtn").onclick=()=>{let copy={...plan,tracking:state};let blob=new Blob([JSON.stringify(copy,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="learning-plan-progress.json";a.click();URL.revokeObjectURL(a.href)};
 $("importFile").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let obj=JSON.parse(await f.text());if(!obj.weekly_schedule||!obj.roadmap||!obj.tracking)throw Error("invalid");plan=obj;state=obj.tracking;save();render();alert("تم استيراد الخطة والتقدم")}catch(err){alert("ملف JSON غير صالح أو لا يحتوي على بيانات الخطة المطلوبة")}};
-$("resetBtn").onclick=()=>{if(confirm("هل تريد مسح علامات الإنجاز والملاحظات المحلية؟")){state=defaultState(plan);save();render()}};
+$("resetBtn").onclick=()=>{if(confirm("هل تريد إعادة المهام والملاحظات والإعدادات إلى الحالة الأصلية؟")){state=defaultState(plan);normalizeTaskState();save();render()}};
 async function init(){try{let r=await fetch("learning-plan.json");if(!r.ok)throw Error();plan=await r.json();}catch(e){plan=embeddedPlan;}
  let saved=localStorage.getItem("learningPlanState");let localState=saved?{...defaultState(plan),...JSON.parse(saved)}:defaultState(plan);
- state=await loadPlanState(localState,remoteState=>{state={...defaultState(plan),...remoteState};localStorage.setItem("learningPlanState",JSON.stringify(state));render();});
- localStorage.setItem("learningPlanState",JSON.stringify(state));render();}
+ state=await loadPlanState(localState,remoteState=>{state={...defaultState(plan),...remoteState};normalizeTaskState();localStorage.setItem("learningPlanState",JSON.stringify(state));render();});
+ normalizeTaskState();localStorage.setItem("learningPlanState",JSON.stringify(state));queuePlanSave(state);render();}
 const embeddedPlan={"title":"خطة التطور — 12 أسبوع","version":1,"principles":["مسار أساسي واحد: Backend Engineering باستخدام Java وSpring Boot.","الإنجليزي مهارة مساندة قصيرة ومتكررة، وليس كورسًا ثانيًا يستهلك اليوم.","Linux وDocker بالتوازي بقدر ما يخدم المشروع.","AI وCloud يتوسع فيهما تدريجيًا من خلال مشروع واحد، وليس عدة مسارات متنافسة.","يوم راحة أسبوعيًا، ولا نحاول تعويض كل ما فات في يوم واحد."],"weekly_schedule":[{"day":"اليوم 1","focus":"Java / Spring Boot","tasks":["جلسة تعلم مركزة","تطبيق عملي على الكود"],"english_minutes":25},{"day":"اليوم 2","focus":"Java / Spring Boot","tasks":["استكمال التعلم","حل تمرين أو بناء Feature"],"english_minutes":25},{"day":"اليوم 3","focus":"Linux / Docker + Backend","tasks":["Linux أو Networking","Docker أو تطبيق على المشروع"],"english_minutes":0},{"day":"اليوم 4","focus":"Java / Spring Boot","tasks":["جلسة تعلم مركزة","تطبيق عملي"],"english_minutes":25},{"day":"اليوم 5","focus":"المشروع العملي","tasks":["تنفيذ Feature كاملة","كتابة Tests أو مراجعة الكود"],"english_minutes":25},{"day":"اليوم 6","focus":"مراجعة + فرص العمل","tasks":["مراجعة إنجازات الأسبوع","تقديم على وظائف مناسبة أو تحديث CV","تخطيط الأسبوع التالي"],"english_minutes":15},{"day":"اليوم 7","focus":"راحة","tasks":["راحة بدون مذاكرة إجبارية"],"english_minutes":0}],"roadmap":[{"week":1,"phase":"Java Core","goal":"مراجعة Java fundamentals وOOP وCollections","deliverable":"تمارين صغيرة + GitHub commits"},{"week":2,"phase":"Java Core","goal":"Exceptions وGenerics وStreams وLambdas","deliverable":"تطبيق صغير يستخدم Collections وStreams"},{"week":3,"phase":"Spring Boot","goal":"REST APIs وDependency Injection وConfiguration","deliverable":"أول API منظم"},{"week":4,"phase":"Spring Boot","goal":"Validation وException Handling وDTOs","deliverable":"API مع Validation وGlobal Exception Handler"},{"week":5,"phase":"Persistence","goal":"JPA/Hibernate وPostgreSQL والعلاقات","deliverable":"CRUD وعلاقات صحيحة"},{"week":6,"phase":"Backend Quality","goal":"Authentication وAuthorization والاختبارات","deliverable":"API محمي مع اختبارات أساسية"},{"week":7,"phase":"Backend Quality","goal":"Transactions وPagination وQuery performance","deliverable":"سيناريو معاملات واختبارات له"},{"week":8,"phase":"Project","goal":"بناء Inventory & Orders API بصورة متكاملة","deliverable":"نسخة أولية قابلة للتجربة"},{"week":9,"phase":"Infrastructure","goal":"Linux basics وDocker وDocker Compose","deliverable":"تشغيل المشروع وقاعدة البيانات عبر Compose"},{"week":10,"phase":"Project","goal":"Redis أو Background Jobs عند وجود حاجة واضحة","deliverable":"Feature واحدة محسّنة مع توثيق السبب"},{"week":11,"phase":"AI introduction","goal":"ربط API بخدمة LLM وتنفيذ استخدام عملي محدود","deliverable":"ميزة AI صغيرة مع حدود استخدام واضحة"},{"week":12,"phase":"Review & deploy","goal":"اختبارات نهائية وتوثيق ونشر تجريبي ومراجعة المسار","deliverable":"README واضح + Demo + تقييم ذاتي"}],"english_plan":{"frequency":"4 إلى 5 مرات أسبوعيًا","session_minutes":25,"method":["استمع لمقطع قصير مرة بدون ترجمة","اكتب الفكرة والكلمات التي التقطتها","راجع English subtitles أو transcript","أعد الاستماع وقلّد جملًا بصوت مرتفع","مرة أو مرتين أسبوعيًا: تحدث 3–5 دقائق عن مشروعك"]},"project":{"name":"AI-powered Inventory & Orders API","description":"مشروع واحد يتطور تدريجيًا: Backend أولًا، ثم جودة واختبارات، ثم تشغيل Docker، ثم ميزة AI صغيرة عند جاهزية الأساس.","stages":["Java + Spring Boot + PostgreSQL + REST API","Validation + Security + Tests + Transactions","Docker + Docker Compose","ميزة AI محدودة مرتبطة ببيانات النظام","Documentation + Demo + Deployment"]},"tracking":{"completedTasks":[],"weeklyNotes":{},"weeklyHoursTarget":12,"startDate":"","currentWeek":1}};
 init();
 </script>
