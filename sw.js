@@ -1,10 +1,10 @@
-const CACHE_NAME = "personal-dashboard-v5";
+const CACHE_NAME = "personal-dashboard-v6";
 const CACHE_PREFIX = "personal-dashboard-";
 const APP_SHELL = [
-  "/index.html",
-  "/dashboard.html",
-  "/finance.html",
-  "/learning-plan.html",
+  "/",
+  "/dashboard",
+  "/finance",
+  "/learning-plan",
   "/manifest.webmanifest",
   "/assets/pwa.js",
   "/assets/offline-store.js",
@@ -17,28 +17,29 @@ const APP_SHELL = [
   "/assets/plan-sync.js",
   "/assets/weekly-cycles.js",
   "/icons/app-icon.svg",
-  "/offline.html"
+  "/offline"
 ];
 
 function getNavigationCacheKey(url) {
   let pathname = url.pathname || "/";
-  if (pathname.endsWith("/") && pathname !== "/") pathname = pathname.slice(0, -1);
+  if (pathname.length > 1 && pathname.endsWith("/")) pathname = pathname.slice(0, -1);
 
   const routeAliases = {
-    "/": "/index.html",
-    "/index.html": "/index.html",
-    "/dashboard": "/dashboard.html",
-    "/dashboard.html": "/dashboard.html",
-    "/finance": "/finance.html",
-    "/finance.html": "/finance.html",
-    "/learning-plan": "/learning-plan.html",
-    "/learning-plan.html": "/learning-plan.html",
-    "/offline": "/offline.html",
-    "/offline.html": "/offline.html"
+    "/": "/",
+    "/index.html": "/",
+    "/dashboard": "/dashboard",
+    "/dashboard.html": "/dashboard",
+    "/finance": "/finance",
+    "/finance.html": "/finance",
+    "/learning-plan": "/learning-plan",
+    "/learning-plan.html": "/learning-plan",
+    "/offline": "/offline",
+    "/offline.html": "/offline"
   };
 
-  const canonicalPath = routeAliases[pathname] || pathname;
-  return new URL(canonicalPath, self.location.origin);
+  const canonicalUrl = new URL(url.href);
+  canonicalUrl.pathname = routeAliases[pathname] || pathname;
+  return canonicalUrl;
 }
 
 async function getCachedNavigation(cache, pageKey) {
@@ -46,7 +47,7 @@ async function getCachedNavigation(cache, pageKey) {
 }
 
 async function getOfflineFallback(cache) {
-  return await cache.match("/offline.html");
+  return await cache.match("/offline");
 }
 
 self.addEventListener("install", event => {
@@ -103,8 +104,17 @@ self.addEventListener("fetch", event => {
       const cache = await caches.open(CACHE_NAME);
       const pageKey = getNavigationCacheKey(url);
 
+      if (pageKey.pathname !== url.pathname) {
+        return Response.redirect(pageKey.href, 302);
+      }
+
       try {
-        const navigationRequest = new Request(request, { redirect: "follow" });
+        const navigationRequest = new Request(pageKey.href, {
+          method: "GET",
+          headers: request.headers,
+          credentials: "same-origin",
+          redirect: "follow"
+        });
         const response = await fetch(navigationRequest);
 
         if (response.ok) {
@@ -133,7 +143,7 @@ self.addEventListener("fetch", event => {
         if (offlinePage) return offlinePage;
 
         return new Response(
-          "<!doctype html><html lang='ar' dir='rtl'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>غير متصل</title><body style='font-family:Tahoma;padding:32px;background:#07101f;color:#eef4ff'><h2>الصفحة دي مش محفوظة على الجهاز</h2><p>افتحها مرة واحدة بالإنترنت وبعدها هتقدر تستخدمها بدون اتصال.</p><a href='/index.html' style='color:#9bc4ff'>الصفحة الرئيسية</a></body></html>",
+          "<!doctype html><html lang='ar' dir='rtl'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>غير متصل</title><body style='font-family:Tahoma;padding:32px;background:#07101f;color:#eef4ff'><h2>الصفحة دي مش محفوظة على الجهاز</h2><p>افتحها مرة واحدة بالإنترنت وبعدها هتقدر تستخدمها بدون اتصال.</p><a href='/' style='color:#9bc4ff'>الصفحة الرئيسية</a></body></html>",
           { headers: { "Content-Type": "text/html; charset=utf-8" }, status: 503 }
         );
       }
