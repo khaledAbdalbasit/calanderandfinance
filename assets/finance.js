@@ -3,7 +3,7 @@ import { supabase } from "./supabase.js";
 const $ = id => document.getElementById(id);
 const money = value => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(Number(value || 0)) + " ج.م";
 const today = new Date();
-const state = { type: "expense", hasDetails: false, rows: [], transactions: [], userId: null, allTime: false };
+const state = { type: "expense", hasDetails: false, rows: [], transactions: [], userId: null, allTime: false, editingId: null, selectedDay: null };
 const monthNames = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 function localDate(date) {
@@ -152,6 +152,94 @@ function renderYearComparison() {
     col.append(bars, label); $("yearComparison").append(col);
   });
 }
+function dayTransactions(date) {
+  return state.transactions.filter(tx => tx.transaction_date === date);
+}
+function renderDailyChart() {
+  const year = selectedYear(), month = selectedMonth();
+  const monthData = state.transactions.filter(tx => {
+    const d = new Date(tx.transaction_date + "T00:00:00");
+    return d.getFullYear() === year && d.getMonth() === month && tx.type === "expense";
+  });
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+  const elapsedDays = year < today.getFullYear() || (year === today.getFullYear() && month < today.getMonth())
+    ? daysInMonth : isCurrentMonth ? today.getDate() : 0;
+  const total = monthData.reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const activeDays = new Set(monthData.map(tx => tx.transaction_date)).size;
+  const averageElapsed = elapsedDays ? total / elapsedDays : 0;
+  const averageActive = activeDays ? total / activeDays : 0;
+  const daily = Array.from({length: daysInMonth}, (_, index) => {
+    const day = index + 1;
+    const date = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    return { day, date, amount: monthData.filter(tx => tx.transaction_date === date).reduce((sum, tx) => sum + Number(tx.amount), 0) };
+  });
+  const max = Math.max(1, ...daily.map(item => item.amount));
+  const chart = $("dailyChart");
+  chart.replaceChildren();
+  daily.forEach(item => {
+    const col = document.createElement("div"); col.className = "day-col";
+    const button = document.createElement("button"); button.type = "button";
+    button.title = item.day + " " + monthNames[month] + ": " + money(item.amount);
+    button.setAttribute("aria-label", "عرض مصروفات يوم " + item.day);
+    const bar = document.createElement("span"); bar.className = "day-bar" + (averageElapsed && item.amount > averageElapsed ? " above-average" : "") + (state.selectedDay === item.date ? " selected" : "");
+    bar.style.height = (item.amount ? Math.max(3, item.amount / max * 100) : 2) + "%";
+    button.append(bar);
+    button.addEventListener("click", () => { state.selectedDay = item.date; renderDailyChart(); });
+    const label = document.createElement("small"); label.textContent = item.day;
+    col.append(button, label); chart.append(col);
+  });
+  $("dailyPeriod").textContent = monthNames[month] + " " + year;
+  $("dailyAverage").textContent = "إجمالي مصروفات الشهر: " + money(total) +
+    " · المتوسط اليومي حتى الآن: " + money(averageElapsed) +
+    " · متوسط أيام الصرف فقط: " + money(averageActive) +
+    " · أيام بها مصروفات: " + activeDays;
+  if (!state.selectedDay || !state.selectedDay.startsWith(year + "-" + String(month + 1).padStart(2, "0"))) {
+    state.selectedDay = localDate(new Date(year, month, Math.min(today.getDate(), daysInMonth)));
+  }
+  const selected = dayTransactions(state.selectedDay);
+  const dayExpense = sum(selected, "expense");
+  $("selectedDayTitle").textContent = "تفاصيل يوم " + Number(state.selectedDay.slice(-2)) + " " + monthNames[month];
+  $("selectedDayTotal").textContent = "المصروف: " + money(dayExpense) + (averageElapsed ? (dayExpense > averageElapsed ? " · أعلى من المتوسط" : " · أقل من المتوسط") : "");
+  const target = $("selectedDayTransactions"); target.replaceChildren();
+  if (!selected.length) {
+    target.innerHTML = '<div class="empty">مفيش عمليات مسجلة في اليوم ده.</div>';
+    return;
+  }
+  selected.forEach(tx => {
+    const row = document.createElement("div"); row.className = "transaction";
+    const title = document.createElement("strong"); title.textContent = tx.category;
+    const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = tx.type === "income" ? "دخل" : "مصروف";
+    const value = document.createElement("span"); value.className = "amount " + (tx.type === "income" ? "positive" : "negative");
+    value.textContent = (tx.type === "income" ? "+" : "−") + money(tx.amount);
+    row.append(title, meta, value); target.append(row);
+  });
+}
+function startEdit(tx) {
+  state.editingId = tx.id;
+  state.type = tx.type;
+  state.hasDetails = Array.isArray(tx.details) && tx.details.length > 0;
+  state.rows = state.hasDetails ? tx.details.map(item => ({name:item.name, amount:String(item.amount)})) : [{name:"",amount:""}];
+  $("category").value = tx.category;
+  $("amount").value = tx.amount;
+  $("transactionDate").value = tx.transaction_date;
+  $("note").value = tx.note || "";
+  setType(tx.type);
+  renderItems(); renderMode();
+  $("formTitle").textContent = "تعديل العملية";
+  $("saveTransaction").textContent = "حفظ التعديلات";
+  $("cancelEdit").hidden = false;
+  $("transactionForm").scrollIntoView({behavior:"smooth", block:"start"});
+}
+function resetTransactionForm() {
+  state.editingId = null; state.hasDetails = false; state.rows = [{name:"",amount:""}];
+  $("transactionForm").reset(); $("transactionDate").value = localDate(today);
+  renderItems(); renderMode(); setType("expense");
+  $("formTitle").textContent = "إضافة عملية جديدة";
+  $("saveTransaction").textContent = "حفظ العملية";
+  $("cancelEdit").hidden = true;
+  $("formError").textContent = "";
+}
 function renderTransactions(list) {
   $("transactionsList").replaceChildren();
   $("listPeriod").textContent = state.allTime ? "كل الشهور" : monthNames[selectedMonth()] + " " + selectedYear();
@@ -177,15 +265,18 @@ function renderTransactions(list) {
     const side = document.createElement("div");
     const amount = document.createElement("div"); amount.className = "amount " + (tx.type === "income" ? "positive" : "negative");
     amount.textContent = (tx.type === "income" ? "+" : "−") + money(tx.amount);
+    const controls = document.createElement("div"); controls.className = "edit-actions";
+    const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "تعديل"; edit.addEventListener("click", () => startEdit(tx));
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "danger"; remove.textContent = "حذف";
     remove.addEventListener("click", () => deleteTransaction(tx.id));
-    side.append(amount, remove); row.append(info, side); $("transactionsList").append(row);
+    controls.append(edit, remove); side.append(amount, controls); row.append(info, side); $("transactionsList").append(row);
   });
 }
 function render() {
   const list = state.transactions.filter(isInSelectedPeriod);
   renderSummary(list);
   renderCategories(list);
+  renderDailyChart();
   renderYearComparison();
   renderTransactions(list);
 }
@@ -205,6 +296,7 @@ async function deleteTransaction(id) {
   const { error } = await supabase.from("finance_transactions").delete().eq("id", id).eq("user_id", state.userId);
   if (error) { setStatus("تعذر حذف العملية.", true); return; }
   state.transactions = state.transactions.filter(tx => tx.id !== id);
+  if (state.editingId === id) resetTransactionForm();
   renderSuggestions(); render(); setStatus("تم حذف العملية.");
 }
 function setType(type) {
@@ -222,6 +314,7 @@ $("addItem").addEventListener("click", addItemRow);
 $("yearFilter").addEventListener("change", () => { state.allTime = false; render(); });
 $("monthFilter").addEventListener("change", () => { state.allTime = false; render(); });
 $("allTimeFilter").addEventListener("click", () => { state.allTime = true; render(); });
+$("cancelEdit").addEventListener("click", resetTransactionForm);
 $("transactionDate").value = localDate(today);
 state.rows.push({ name: "", amount: "" }); renderItems();
 $("transactionForm").addEventListener("submit", async event => {
@@ -248,20 +341,25 @@ $("transactionForm").addEventListener("submit", async event => {
     details, note: $("note").value.trim() || null
   };
   $("saveTransaction").disabled = true;
-  const { data, error } = await supabase.from("finance_transactions").insert(payload).select().single();
+  const query = state.editingId
+    ? supabase.from("finance_transactions").update(payload).eq("id", state.editingId).eq("user_id", state.userId).select().single()
+    : supabase.from("finance_transactions").insert(payload).select().single();
+  const { data, error } = await query;
   $("saveTransaction").disabled = false;
-  if (error) { $("formError").textContent = "تعذر حفظ العملية. تأكد من تنفيذ ملف إعداد قاعدة البيانات."; return; }
-  state.transactions.unshift(data);
-  $("transactionForm").reset();
-  $("transactionDate").value = localDate(today);
-  state.rows = [{ name: "", amount: "" }]; renderItems();
-  setType("expense"); state.hasDetails = false; renderMode();
+  if (error) { $("formError").textContent = state.editingId ? "تعذر تعديل العملية." : "تعذر حفظ العملية. تأكد من تنفيذ ملف إعداد قاعدة البيانات."; return; }
+  const wasEditing = Boolean(state.editingId);
+  if (state.editingId) {
+    state.transactions = state.transactions.map(tx => tx.id === data.id ? data : tx);
+  } else {
+    state.transactions.unshift(data);
+  }
+  resetTransactionForm();
   const savedDate = new Date(data.transaction_date + "T00:00:00");
   $("yearFilter").value = String(savedDate.getFullYear());
   $("monthFilter").value = String(savedDate.getMonth());
   state.allTime = false;
   fillFilters(); renderSuggestions(); render();
-  setStatus("تم حفظ العملية بنجاح.");
+  setStatus(wasEditing ? "تم تحديث العملية." : "تم حفظ العملية بنجاح.");
 });
 $("signOut").addEventListener("click", async () => {
   const { error } = await supabase.auth.signOut();
