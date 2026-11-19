@@ -3,7 +3,7 @@ import { supabase } from "./supabase.js";
 const $ = id => document.getElementById(id);
 const money = value => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(Number(value || 0)) + " ج.م";
 const today = new Date();
-const state = { type: "expense", hasDetails: false, rows: [], transactions: [], userId: null, allTime: false, editingId: null, selectedDay: null };
+const state = { type: "expense", hasDetails: false, rows: [], transactions: [], userId: null, allTime: false, editingId: null, selectedDay: null, budgets: [] };
 const monthNames = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 function localDate(date) {
@@ -127,6 +127,127 @@ function renderCategories(list) {
     $("categoryBreakdown").append(row);
   });
 }
+
+function monthTransactions(year, month) {
+  const prefix = year + "-" + String(month + 1).padStart(2, "0");
+  return state.transactions.filter(tx => tx.transaction_date.startsWith(prefix));
+}
+function categoryExpenses(list) {
+  const totals = new Map();
+  list.filter(tx => tx.type === "expense").forEach(tx => {
+    totals.set(tx.category, (totals.get(tx.category) || 0) + Number(tx.amount));
+  });
+  return totals;
+}
+function renderBudgets() {
+  const year = selectedYear(), month = selectedMonth();
+  const spentByCategory = categoryExpenses(monthTransactions(year, month));
+  $("budgetPeriod").textContent = monthNames[month] + " " + year;
+  $("budgetsList").replaceChildren();
+  if (!state.budgets.length) {
+    $("budgetsList").innerHTML = '<div class="empty">لسه مفيش ميزانيات للشهر ده. أضف حدًا شهريًا لأي تصنيف عشان تتابع مصروفاتك.</div>';
+    return;
+  }
+  state.budgets.forEach(budget => {
+    const spent = spentByCategory.get(budget.category) || 0;
+    const limit = Number(budget.amount);
+    const ratio = limit > 0 ? spent / limit : 0;
+    const row = document.createElement("div"); row.className = "budget-row";
+    const meta = document.createElement("div"); meta.className = "budget-meta";
+    const label = document.createElement("strong"); label.textContent = budget.category;
+    const value = document.createElement("span"); value.textContent = money(spent) + " من " + money(limit);
+    meta.append(label, value);
+    const track = document.createElement("div"); track.className = "budget-track";
+    const fill = document.createElement("div"); fill.className = "budget-fill" + (ratio >= 1 ? " over" : ratio >= .8 ? " warning" : "");
+    fill.style.width = Math.min(100, ratio * 100) + "%"; track.append(fill);
+    const footer = document.createElement("div"); footer.className = "budget-meta";
+    const status = document.createElement("small");
+    status.textContent = ratio >= 1 ? "تجاوزت الميزانية بـ " + money(spent - limit) : ratio >= .8 ? "استخدمت " + Math.round(ratio * 100) + "% — اقتربت من الحد" : "متبقي " + money(limit - spent);
+    if (ratio >= .8) status.className = "negative";
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "danger"; remove.textContent = "حذف";
+    remove.addEventListener("click", () => deleteBudget(budget.id));
+    footer.append(status, remove);
+    row.append(meta, track, footer); $("budgetsList").append(row);
+  });
+}
+function renderInsights() {
+  const year = selectedYear(), month = selectedMonth();
+  const current = monthTransactions(year, month);
+  const previousDate = new Date(year, month - 1, 1);
+  const previous = monthTransactions(previousDate.getFullYear(), previousDate.getMonth());
+  const currentExpense = sum(current, "expense");
+  const previousExpense = sum(previous, "expense");
+  const currentMap = categoryExpenses(current);
+  const previousMap = categoryExpenses(previous);
+  const target = $("financialInsights");
+  target.replaceChildren();
+  $("insightPeriod").textContent = monthNames[month] + " " + year;
+  const addInsight = (title, description, warning = false) => {
+    const item = document.createElement("div"); item.className = "insight" + (warning ? " warning" : "");
+    const heading = document.createElement("strong"); heading.textContent = title;
+    const detail = document.createElement("small"); detail.textContent = description;
+    item.append(heading, detail); target.append(item);
+  };
+  if (!current.length) {
+    target.innerHTML = '<div class="empty">سجّل عملياتك عشان نقدر نحلل إنفاقك ونقدم اقتراحات مفيدة.</div>';
+    return;
+  }
+  const top = [...currentMap.entries()].sort((a,b) => b[1] - a[1]).slice(0, 3);
+  if (top.length) {
+    addInsight("أعلى تصنيف إنفاقًا", top.map(([name, amount]) => name + ": " + money(amount)).join(" · "));
+  }
+  if (previous.length) {
+    const difference = currentExpense - previousExpense;
+    const percent = previousExpense > 0 ? Math.round(difference / previousExpense * 100) : null;
+    if (previousExpense > 0) {
+      addInsight(difference > 0 ? "مصروفاتك زادت عن الشهر السابق" : difference < 0 ? "مصروفاتك قلت عن الشهر السابق" : "مصروفاتك زي الشهر السابق",
+        (difference > 0 ? "زيادة " : difference < 0 ? "توفير " : "فرق ") + money(Math.abs(difference)) + (percent === null ? "" : " (" + Math.abs(percent) + "%)") + " مقارنة بالشهر السابق.",
+        difference > 0);
+    } else {
+      addInsight("بداية المقارنة", "الشهر السابق لا يحتوي على مصروفات مسجلة؛ سنستخدمه كخط أساس بعد تسجيل بيانات أكثر.");
+    }
+    const increases = [...currentMap.entries()].filter(([category, amount]) => {
+      const old = previousMap.get(category) || 0;
+      return old > 0 && amount >= old * 1.25 && amount - old >= 50;
+    }).sort((a,b) => (b[1] - (previousMap.get(b[0]) || 0)) - (a[1] - (previousMap.get(a[0]) || 0))).slice(0,3);
+    increases.forEach(([category, amount]) => {
+      const old = previousMap.get(category);
+      const delta = amount - old;
+      addInsight("زيادة ملحوظة في " + category, "أنفقت " + money(amount) + " مقابل " + money(old) + " الشهر السابق؛ زيادة " + money(delta) + ".", true);
+    });
+  } else {
+    addInsight("لسه محتاجين بيانات للمقارنة", "بعد تسجيل مصروفات في شهر سابق، هنقدر نحدد الزيادات والتغيّرات بدقة أكبر.");
+  }
+  const over = state.budgets.filter(b => (currentMap.get(b.category) || 0) > Number(b.amount));
+  const near = state.budgets.filter(b => {
+    const ratio = (currentMap.get(b.category) || 0) / Number(b.amount);
+    return ratio >= .8 && ratio <= 1;
+  });
+  over.forEach(b => addInsight("تجاوزت ميزانية " + b.category, "تجاوزت الحد المحدد بمقدار " + money((currentMap.get(b.category) || 0) - Number(b.amount)) + ".", true));
+  near.forEach(b => addInsight("اقتربت من ميزانية " + b.category, "استخدمت " + Math.round((currentMap.get(b.category) || 0) / Number(b.amount) * 100) + "% من الميزانية.", true));
+  if (!target.children.length) addInsight("الأمور مستقرة", "لا توجد زيادات كبيرة أو تجاوزات في الميزانيات المسجلة حتى الآن.");
+}
+async function loadBudgets() {
+  const { data, error } = await supabase.from("finance_budgets").select("*")
+    .eq("user_id", state.userId).eq("budget_month", selectedMonth() + 1).eq("budget_year", selectedYear()).order("category");
+  if (error) {
+    $("budgetError").textContent = "تعذر تحميل الميزانيات. تأكد من تنفيذ ملف finance-budgets-schema.sql في Supabase.";
+    state.budgets = [];
+  } else {
+    $("budgetError").textContent = "";
+    state.budgets = data || [];
+  }
+  renderBudgets();
+  renderInsights();
+}
+async function deleteBudget(id) {
+  if (!window.confirm("متأكد إنك عايز تحذف الميزانية دي؟")) return;
+  const { error } = await supabase.from("finance_budgets").delete().eq("id", id).eq("user_id", state.userId);
+  if (error) { $("budgetError").textContent = "تعذر حذف الميزانية."; return; }
+  state.budgets = state.budgets.filter(item => item.id !== id);
+  renderBudgets(); renderInsights();
+}
+
 function renderYearComparison() {
   const year = selectedYear();
   const yearData = state.transactions.filter(tx => Number(tx.transaction_date.slice(0,4)) === year);
@@ -276,6 +397,8 @@ function render() {
   const list = state.transactions.filter(isInSelectedPeriod);
   renderSummary(list);
   renderCategories(list);
+  renderBudgets();
+  renderInsights();
   renderDailyChart();
   renderYearComparison();
   renderTransactions(list);
@@ -311,10 +434,31 @@ function toggleDetails() {
 document.querySelectorAll("[data-type]").forEach(button => button.addEventListener("click", () => setType(button.dataset.type)));
 $("toggleDetails").addEventListener("click", toggleDetails);
 $("addItem").addEventListener("click", addItemRow);
-$("yearFilter").addEventListener("change", () => { state.allTime = false; render(); });
-$("monthFilter").addEventListener("change", () => { state.allTime = false; render(); });
+$("yearFilter").addEventListener("change", async () => { state.allTime = false; render(); await loadBudgets(); });
+$("monthFilter").addEventListener("change", async () => { state.allTime = false; render(); await loadBudgets(); });
 $("allTimeFilter").addEventListener("click", () => { state.allTime = true; render(); });
 $("cancelEdit").addEventListener("click", resetTransactionForm);
+$("budgetForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  $("budgetError").textContent = "";
+  const category = $("budgetCategory").value.trim();
+  const amount = Number($("budgetAmount").value);
+  if (!category || !Number.isFinite(amount) || amount <= 0) {
+    $("budgetError").textContent = "اكتب تصنيفًا ومبلغًا صحيحًا أكبر من صفر.";
+    return;
+  }
+  $("saveBudget").disabled = true;
+  const payload = { user_id: state.userId, category, amount: Number(amount.toFixed(2)), budget_month: selectedMonth() + 1, budget_year: selectedYear() };
+  const { data, error } = await supabase.from("finance_budgets").upsert(payload, { onConflict: "user_id,category,budget_month,budget_year" }).select().single();
+  $("saveBudget").disabled = false;
+  if (error) {
+    $("budgetError").textContent = "تعذر حفظ الميزانية: " + (error.message || "راجع إعدادات قاعدة البيانات.");
+    return;
+  }
+  state.budgets = [...state.budgets.filter(item => item.id !== data.id && !(item.category.toLocaleLowerCase() === data.category.toLocaleLowerCase())), data].sort((a,b) => a.category.localeCompare(b.category));
+  $("budgetForm").reset();
+  renderBudgets(); renderInsights();
+});
 $("transactionDate").value = localDate(today);
 state.rows.push({ name: "", amount: "" }); renderItems();
 $("transactionForm").addEventListener("submit", async event => {
@@ -368,6 +512,7 @@ $("transactionForm").addEventListener("submit", async event => {
   $("monthFilter").value = String(savedDate.getMonth());
   state.allTime = false;
   fillFilters(); renderSuggestions(); render();
+  await loadBudgets();
   setStatus(wasEditing ? "تم تحديث العملية." : "تم حفظ العملية بنجاح.");
 });
 $("signOut").addEventListener("click", async () => {
@@ -382,4 +527,5 @@ if (sessionError || !sessionData.session) {
 } else {
   state.userId = sessionData.session.user.id;
   await loadTransactions();
+  await loadBudgets();
 }
