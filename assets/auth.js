@@ -57,7 +57,9 @@ function showError(error) {
   const detail = String(error?.message || "").toLowerCase();
   let text = "تعذر الاتصال بخدمة الحسابات. تحقق من الإنترنت وحاول مرة أخرى.";
 
-  if (/invalid login credentials|invalid.*credentials/.test(detail)) {
+  if (/user_products|product access/.test(detail)) {
+    text = "تعذر تحميل اختيارات المنتجات. شغّل ملف user-products-schema.sql في Supabase ثم حاول مرة أخرى.";
+  } else if (/invalid login credentials|invalid.*credentials/.test(detail)) {
     text = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
   } else if (/email not confirmed/.test(detail)) {
     text = "يجب تأكيد بريدك الإلكتروني من رسالة التفعيل قبل تسجيل الدخول.";
