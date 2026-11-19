@@ -3,7 +3,7 @@ import { supabase } from "./supabase.js";
 const $ = id => document.getElementById(id);
 const money = value => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(Number(value || 0)) + " ج.م";
 const today = new Date();
-const state = { type: "expense", mode: "package", rows: [], transactions: [], userId: null, allTime: false };
+const state = { type: "expense", hasDetails: false, rows: [], transactions: [], userId: null, allTime: false };
 const monthNames = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 function localDate(date) {
@@ -25,8 +25,10 @@ function setStatus(message, error = false) {
   $("loadStatus").className = error ? "error" : "muted";
 }
 function renderMode() {
-  $("packageFields").hidden = state.mode !== "package";
-  $("detailedFields").hidden = state.mode !== "detailed";
+  $("packageFields").hidden = state.hasDetails;
+  $("detailedFields").hidden = !state.hasDetails;
+  $("toggleDetails").textContent = state.hasDetails ? "− إخفاء التفاصيل" : "+ إضافة تفاصيل (اختياري)";
+  $("toggleDetails").setAttribute("aria-expanded", String(state.hasDetails));
 }
 function renderItems() {
   $("items").replaceChildren();
@@ -164,7 +166,7 @@ function renderTransactions(list) {
     const title = document.createElement("strong"); title.textContent = tx.category;
     const meta = document.createElement("div"); meta.className = "meta";
     const date = new Date(tx.transaction_date + "T00:00:00").toLocaleDateString("ar-EG");
-    meta.textContent = (tx.type === "income" ? "دخل" : "مصروف") + " · " + date + " · " + (tx.entry_mode === "package" ? "إجمالي" : "بالتفصيل");
+    meta.textContent = (tx.type === "income" ? "دخل" : "مصروف") + " · " + date + (tx.details?.length ? " · بالتفصيل" : "");
     info.append(title, meta);
     if (Array.isArray(tx.details) && tx.details.length) {
       const detail = document.createElement("div"); detail.className = "detail-preview";
@@ -209,13 +211,13 @@ function setType(type) {
   state.type = type;
   document.querySelectorAll("[data-type]").forEach(button => button.classList.toggle("active", button.dataset.type === type));
 }
-function setMode(mode) {
-  state.mode = mode;
-  document.querySelectorAll("[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
+function toggleDetails() {
+  state.hasDetails = !state.hasDetails;
+  if (state.hasDetails && !state.rows.length) { state.rows = [{ name: "", amount: "" }]; renderItems(); }
   renderMode();
 }
 document.querySelectorAll("[data-type]").forEach(button => button.addEventListener("click", () => setType(button.dataset.type)));
-document.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => setMode(button.dataset.mode)));
+$("toggleDetails").addEventListener("click", toggleDetails);
 $("addItem").addEventListener("click", addItemRow);
 $("yearFilter").addEventListener("change", () => { state.allTime = false; render(); });
 $("monthFilter").addEventListener("change", () => { state.allTime = false; render(); });
@@ -230,7 +232,7 @@ $("transactionForm").addEventListener("submit", async event => {
   let amount = 0;
   let details = [];
   if (!category || !date) { $("formError").textContent = "اكتب البند وحدد التاريخ."; return; }
-  if (state.mode === "package") {
+  if (!state.hasDetails) {
     amount = Number($("amount").value);
     if (!Number.isFinite(amount) || amount <= 0) { $("formError").textContent = "اكتب مبلغ صحيح أكبر من صفر."; return; }
   } else {
@@ -241,7 +243,7 @@ $("transactionForm").addEventListener("submit", async event => {
     amount = details.reduce((total, item) => total + item.amount, 0);
   }
   const payload = {
-    user_id: state.userId, type: state.type, entry_mode: state.mode,
+    user_id: state.userId, type: state.type, entry_mode: state.hasDetails ? "detailed" : "package",
     category, amount: Number(amount.toFixed(2)), transaction_date: date,
     details, note: $("note").value.trim() || null
   };
@@ -253,7 +255,7 @@ $("transactionForm").addEventListener("submit", async event => {
   $("transactionForm").reset();
   $("transactionDate").value = localDate(today);
   state.rows = [{ name: "", amount: "" }]; renderItems();
-  setType("expense"); setMode("package");
+  setType("expense"); state.hasDetails = false; renderMode();
   const savedDate = new Date(data.transaction_date + "T00:00:00");
   $("yearFilter").value = String(savedDate.getFullYear());
   $("monthFilter").value = String(savedDate.getMonth());
