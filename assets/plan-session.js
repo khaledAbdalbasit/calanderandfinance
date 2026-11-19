@@ -1,4 +1,7 @@
 import { supabase } from "./supabase.js";
+import { requireProduct } from "./product-access.js";
+
+if (await requireProduct("todo")) {
 
 const button = document.getElementById("planSignOut");
 const status = document.getElementById("sessionStatus");
@@ -37,3 +40,5 @@ button?.addEventListener("click", async () => {
   }
   signIn();
 });
+
+}

@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07101f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/app-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/app-icon.svg">
 <title>خطة التطور — 12 أسبوع</title>
 <style>
 :root{--bg:#0b1220;--panel:#121d30;--panel2:#17243a;--line:#263650;--text:#eef4ff;--muted:#9aabc4;--blue:#73a7ff;--green:#54d6a0;--yellow:#f4c76b;--red:#ff8e8e}
@@ -49,6 +55,7 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
 .cycle-panel{margin:14px 0 18px}.cycle-panel p{margin:4px 0 0}.carryover-card{grid-column:1/-1;border-color:rgba(244,199,107,.35)}.carryover-label{font-size:11px;color:#f4c76b;background:rgba(244,199,107,.1);border:1px solid rgba(244,199,107,.25);border-radius:20px;padding:2px 7px;white-space:nowrap}.weekly-stat-row{padding:14px 0;border-bottom:1px solid rgba(154,190,236,.12)}.weekly-stat-row:last-child{border:0}.weekly-stat-row .progress{margin:8px 0}.stats-grid{grid-template-columns:repeat(4,1fr)}
 @media(max-width:760px){.stats-grid{grid-template-columns:repeat(2,1fr)}.carryover-label{white-space:normal}}
 @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}.two{grid-template-columns:1fr}.wrap{padding:18px 12px 45px}}
+
 </style>
 </head>
 <body>
@@ -124,10 +131,10 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
   <div class="dialog-actions"><button class="primary" type="submit">حفظ المهمة</button><button type="button" id="cancelTask">إلغاء</button></div>
  </form>
 </dialog>
-<footer>تقدمك وملاحظاتك ومهامك تتم مزامنتها تلقائيًا مع حسابك. استخدم «تصدير التقدم JSON» للاحتفاظ بنسخة احتياطية.</footer>
+<footer>تقدمك وملاحظاتك ومهامك تتم مزامنتها تلقائيًا مع حسابك. استخدم «تصدير التقدم JSON» للاحتفاظ بنسخة احتياطية. · © 2026 Khaled Abdelbasit. All rights reserved.</footer>
 </div>
 <script type="module">
-import { loadPlanState, queuePlanSave, getUserPlanStorageKey } from "./assets/plan-sync.js";
+import { loadPlanState, queuePlanSave } from "./assets/plan-sync.js";
 import {
   initializeWeeklyCycles,
   startWeeklyCycle,
@@ -162,8 +169,6 @@ function defaultState(p) {
 }
 
 function save() {
-  const storageKey = getUserPlanStorageKey();
-  if (storageKey) localStorage.setItem(storageKey, JSON.stringify(state));
   queuePlanSave(state);
 }
 
@@ -518,8 +523,6 @@ async function init() {
     state = { ...defaultState(plan), ...remoteState };
     initializeWeeklyCycles(state, plan);
     maintainWeeklyCycle();
-    const storageKey = getUserPlanStorageKey();
-    if (storageKey) localStorage.setItem(storageKey, JSON.stringify(state));
     render();
   });
 
@@ -542,5 +545,7 @@ document.addEventListener("visibilitychange", () => {
 </script>
 
 <script type="module" src="/assets/plan-session.js"></script>
+
+<script type="module" src="/assets/pwa.js"></script>
 </body>
 </html>
