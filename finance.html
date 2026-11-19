@@ -32,6 +32,68 @@ input,select{width:100%;background:#091526;border:1px solid var(--line);border-r
 
 @media(max-width:850px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.wrap{padding:14px 12px 36px}.top{align-items:flex-start}.top h1{font-size:26px}.top .actions{width:100%;justify-content:space-between}.stats{gap:9px;margin:14px 0}.stat{padding:13px 11px;border-radius:15px}.stat strong{font-size:20px;overflow-wrap:anywhere}.panel{padding:15px 13px;border-radius:17px}.filters{grid-template-columns:1fr 1fr;gap:8px}.filters button{grid-column:1/-1;width:100%}.field{margin:10px 0}.item-row{grid-template-columns:minmax(0,1fr) 100px 42px;gap:6px}.item-row button{padding:5px}.month-bars{gap:3px}.bar{width:8px}.category-row{grid-template-columns:72px minmax(35px,1fr) auto;gap:7px;font-size:13px}.category-row span{font-size:12px}.transaction{align-items:flex-start}.transaction>div:first-child{min-width:0}.transaction strong{overflow-wrap:anywhere}.transaction .amount{font-size:14px}.transaction button{min-height:38px;padding:6px 10px}.daily-chart{gap:4px}.day-col{width:29px}.day-bar{width:19px}.actions button{flex:1}.section-head h2{font-size:17px}}
+
+/* Responsive layout refinements */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.wrap,.layout,.layout>*,.panel,.stat,.filters,.top,.transaction,.section-head{min-width:0}
+.wrap{width:100%}
+.layout{grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr)}
+.layout>div{min-width:0}
+.panel{width:100%;overflow:hidden}
+.transaction>div:first-child{min-width:0;flex:1}
+.transaction>div:last-child{flex:0 0 auto;max-width:46%}
+.transaction strong,.transaction .meta,.detail-preview{overflow-wrap:anywhere;word-break:break-word}
+.actions{min-width:0}
+button{max-width:100%;white-space:normal}
+input,select{max-width:100%}
+.chart-scroll{width:100%;max-width:100%;overflow-x:auto;touch-action:pan-x}
+.daily-chart,.month-bars{width:max-content}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){
+ .wrap{padding:12px 10px 30px}
+ .top{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+ .top>div:first-child{min-width:0}
+ .top .actions{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px;margin:0}
+ .top .actions a{display:flex;align-items:center;justify-content:center;min-height:44px}
+ .top .actions button{width:100%;min-width:0;padding:9px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+ .stat{padding:12px 10px}
+ .stat strong{font-size:clamp(16px,4.6vw,21px);line-height:1.5;overflow-wrap:anywhere}
+ .filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+ .filters .field{min-width:0}
+ .filters button{grid-column:1/-1;width:100%}
+ #loadStatus{grid-column:1/-1}
+ .layout{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ .panel{padding:13px 11px;border-radius:15px}
+ .section-head{align-items:flex-start}
+ .section-head h2{font-size:16px;line-height:1.5}
+ .two{grid-template-columns:minmax(0,1fr)}
+ .item-row{grid-template-columns:minmax(0,1fr) minmax(75px,.65fr) 40px;gap:6px}
+ .category-row{grid-template-columns:minmax(62px,.8fr) minmax(45px,1.3fr) auto;gap:7px}
+ .category-row strong,.category-row span{min-width:0;overflow-wrap:anywhere;font-size:12px}
+ .transaction{gap:8px;align-items:flex-start}
+ .transaction>div:last-child{max-width:42%;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+ .edit-actions{flex-wrap:wrap;justify-content:flex-end}
+ .edit-actions button{padding:5px 8px;font-size:13px}
+ .amount{font-size:13px;white-space:normal;overflow-wrap:anywhere;text-align:end}
+ .daily-chart{height:180px;gap:5px}
+ .day-col{width:27px}
+ .day-bar{width:18px}
+ .month-bars{min-width:500px}
+ .average-note{font-size:12px;overflow-wrap:anywhere}
+}
+@media(max-width:360px){
+ .wrap{padding-inline:8px}
+ .stats{gap:6px}
+ .stat{padding:10px 8px}
+ .stat small{font-size:11px}
+ .stat strong{font-size:16px}
+ .panel{padding:11px 9px}
+ .category-row{grid-template-columns:58px minmax(35px,1fr) auto;gap:5px}
+ .transaction>div:last-child{max-width:45%}
+ .edit-actions{gap:4px}
+ .edit-actions button{font-size:12px;padding:4px 6px}
+}
 </style>
 </head>
 <body>
