@@ -1,4 +1,7 @@
 import { supabase } from "./supabase.js";
+import { requireProduct } from "./product-access.js";
+
+if (await requireProduct("finance")) {
 
 const $ = id => document.getElementById(id);
 const money = value => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(Number(value || 0)) + " ج.م";
@@ -528,4 +531,6 @@ if (sessionError || !sessionData.session) {
   state.userId = sessionData.session.user.id;
   await loadTransactions();
   await loadBudgets();
+}
+
 }
