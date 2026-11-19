@@ -5,7 +5,7 @@ if (await requireProduct("todo")) {
 
 const button = document.getElementById("planSignOut");
 const status = document.getElementById("sessionStatus");
-const signIn = () => window.location.replace("/index.html");
+const signIn = () => window.location.replace("/");
 
 let checking = true;
 
