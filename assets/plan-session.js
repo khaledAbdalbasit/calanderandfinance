@@ -1,26 +1,39 @@
-import { getUser, logout, onAuthChange } from './netlify-identity.js';
+import { supabase } from "./supabase.js";
 
-const button = document.getElementById('planSignOut');
-const status = document.getElementById('sessionStatus');
-const signIn = () => window.location.replace('/index.html');
+const button = document.getElementById("planSignOut");
+const status = document.getElementById("sessionStatus");
+const signIn = () => window.location.replace("/index.html");
 
-// Recheck when restoring a page from the browser's back/forward cache.
-window.addEventListener('pageshow', async () => {
-  if (!await getUser()) signIn();
+let checking = true;
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  if (!session && !checking) signIn();
 });
-onAuthChange((_event, user) => {
-  if (!user) signIn();
-});
-if (!await getUser()) signIn();
 
-button.addEventListener('click', async () => {
+try {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  checking = false;
+  if (!data.session) signIn();
+  else if (status) status.textContent = `متصل: ${data.session.user.email || ""}`;
+} catch {
+  checking = false;
+  signIn();
+}
+
+window.addEventListener("pageshow", async () => {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) signIn();
+});
+
+button?.addEventListener("click", async () => {
   button.disabled = true;
-  status.textContent = 'جارٍ تسجيل الخروج…';
-  try {
-    await logout();
-    signIn();
-  } catch {
-    status.textContent = 'تعذر تسجيل الخروج. تحقق من الاتصال وحاول مرة أخرى.';
+  if (status) status.textContent = "جارٍ تسجيل الخروج…";
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    if (status) status.textContent = "تعذر تسجيل الخروج. تحقق من الاتصال وحاول مرة أخرى.";
     button.disabled = false;
+    return;
   }
+  signIn();
 });
