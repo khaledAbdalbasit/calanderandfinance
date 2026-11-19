@@ -9,7 +9,7 @@ let installPrompt = null;
 function showConnectionState() {
   if (!navigator.onLine) {
     bar.style.display = "block";
-    bar.textContent = "أنت غير متصل بالإنترنت — التغييرات هتتحفظ على الجهاز وتتزامن عند عودة الاتصال.";
+    bar.textContent = "أنت دلوقتي بدون إنترنت. تقدر تكمل شغلك، والتغييرات هتتحفظ على جهازك وتتزامن لما الاتصال يرجع.";
   } else {
     bar.style.display = "none";
     window.dispatchEvent(new CustomEvent("app-online"));
