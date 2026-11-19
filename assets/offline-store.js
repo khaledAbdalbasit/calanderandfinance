@@ -89,7 +89,7 @@ export async function syncOfflineQueue(supabase, userId) {
       continue;
     }
 
-    if (result.error) break;
+    if (result.error) continue;
     await withStore("queue", "readwrite", store => store.delete(item.id));
     synced++;
   }
