@@ -83,7 +83,7 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
  <div class="grid stats-grid">
   <div class="stat"><small>الالتزام في الأسابيع المحددة</small><strong id="onTimeRate">0%</strong><small>المهام التي أُنجزت في أسبوعها الأصلي</small></div>
   <div class="stat"><small>الإنجاز الإجمالي</small><strong id="overallRate">0%</strong><small>يشمل المهام التي انتهت متأخرة</small></div>
-  <div class="stat"><small>مهام غير مكتملة</small><strong id="carryoverCount">0</strong><small>من جميع الأسابيع</small></div>
+  <div class="stat"><small>مهام متأخرة حاليًا</small><strong id="carryoverCount">0</strong><small>انتقلت من أسابيع سابقة</small></div>
   <div class="stat"><small>المهام المنجزة</small><strong id="completedCount">0 / 0</strong><small>كل مهمة تُحسب مرة واحدة</small></div>
  </div>
  <div class="card"><h3>أداء كل أسبوع</h3><p class="muted">النسبة هنا تقيس المهام التي أُنجزت قبل نهاية أسبوعها الأصلي، وليس المهام التي أُنجزت لاحقًا.</p><div id="weeklyStats"></div></div>
@@ -200,7 +200,7 @@ function createTaskRow(task, dayIndex, options = {}) {
   if (carryover) {
     const label = document.createElement("span");
     label.className = "carryover-label";
-    label.textContent = "من الأسبوع " + task.originWeek;
+    label.textContent = "من الأسبوع " + task.originWeek + (task.carryoverCount > 1 ? " · متأخرة " + task.carryoverCount + " أسابيع" : " · متأخرة أسبوع");
     row.appendChild(label);
   }
 
@@ -242,10 +242,15 @@ function render() {
     ? "المهام المتأخرة تظل مرتبطة بالأسبوع الذي بدأت فيه، والمهام الأساسية تتجدد كل أسبوع."
     : "عند بدء الأسبوع ستُنشأ نسخة مستقلة من المهام، ويبدأ حساب مدة السبعة أيام.";
 
+  let total = 0;
+  let done = 0;
+
   if (cycle) {
     const carryovers = (cycle.carryoverTaskIds || [])
       .map(id => getTaskInstance(state, id))
-      .filter(task => task && !task.deleted && !task.completedAt);
+      .filter(task => task && !task.deleted);
+    total += carryovers.length;
+    done += carryovers.filter(task => task.completedAt).length;
 
     if (carryovers.length) {
       const card = document.createElement("div");
@@ -260,9 +265,6 @@ function render() {
       $("schedule").appendChild(card);
     }
   }
-
-  let total = 0;
-  let done = 0;
 
   plan.weekly_schedule.forEach((day, dayIndex) => {
     const card = document.createElement("div");
@@ -322,7 +324,7 @@ function renderStatistics() {
   const stats = getWeeklyStatistics(state);
   $("onTimeRate").textContent = stats.onTimeRate + "%";
   $("overallRate").textContent = stats.overallRate + "%";
-  $("carryoverCount").textContent = stats.overdue;
+  $("carryoverCount").textContent = stats.carryover;
   $("completedCount").textContent = `${stats.completed} / ${stats.total}`;
   $("weeklyStats").innerHTML = "";
 
