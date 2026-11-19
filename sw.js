@@ -1,6 +1,5 @@
 const CACHE_NAME = "personal-dashboard-v2";
 const APP_SHELL = [
-  "/",
   "/index.html",
   "/dashboard.html",
   "/finance.html",
