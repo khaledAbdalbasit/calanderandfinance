@@ -3,12 +3,35 @@ import { supabase } from "./supabase.js";
 let currentUserId = null;
 let saveTimer = null;
 let channel = null;
+let latestState = null;
+
+async function savePlanNow(state) {
+  if (!currentUserId) return;
+  const { error } = await supabase
+    .from("user_learning_plans")
+    .upsert(
+      { user_id: currentUserId, plan_data: state },
+      { onConflict: "user_id" }
+    );
+
+  if (error) throw error;
+  latestState = null;
+}
+
+window.addEventListener("online", () => {
+  if (!latestState || !currentUserId) return;
+  savePlanNow(latestState).catch(error => {
+    console.error("Cloud plan sync retry failed:", error);
+  });
+});
 
 export async function loadPlanState(localState, onRemoteUpdate) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) throw userError || new Error("يجب تسجيل الدخول أولًا.");
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.user) {
+    throw sessionError || new Error("يجب تسجيل الدخول أولًا.");
+  }
 
-  currentUserId = user.id;
+  currentUserId = session.user.id;
 
   const { data, error } = await supabase
     .from("user_learning_plans")
@@ -16,14 +39,21 @@ export async function loadPlanState(localState, onRemoteUpdate) {
     .eq("user_id", currentUserId)
     .maybeSingle();
 
-  if (error) throw error;
-
   let initialState;
-  if (data?.plan_data && typeof data.plan_data === "object") {
+  if (!error && data?.plan_data && typeof data.plan_data === "object") {
     initialState = { ...localState, ...data.plan_data };
   } else {
     initialState = localState;
-    await savePlanNow(initialState);
+    latestState = structuredClone(initialState);
+    if (!error) {
+      try {
+        await savePlanNow(initialState);
+      } catch (saveError) {
+        console.error("Initial cloud plan save failed:", saveError);
+      }
+    } else {
+      console.error("Cloud plan load failed; using local copy:", error);
+    }
   }
 
   channel = supabase
@@ -46,24 +76,12 @@ export async function loadPlanState(localState, onRemoteUpdate) {
   return initialState;
 }
 
-async function savePlanNow(state) {
-  if (!currentUserId) return;
-  const { error } = await supabase
-    .from("user_learning_plans")
-    .upsert(
-      { user_id: currentUserId, plan_data: state },
-      { onConflict: "user_id" }
-    );
-
-  if (error) throw error;
-}
-
 export function queuePlanSave(state) {
   if (!currentUserId) return;
   clearTimeout(saveTimer);
-  const snapshot = structuredClone(state);
+  latestState = structuredClone(state);
   saveTimer = setTimeout(() => {
-    savePlanNow(snapshot).catch(error => {
+    savePlanNow(latestState).catch(error => {
       console.error("Cloud plan sync failed:", error);
     });
   }, 700);
