@@ -344,9 +344,18 @@ $("transactionForm").addEventListener("submit", async event => {
   const query = state.editingId
     ? supabase.from("finance_transactions").update(payload).eq("id", state.editingId).eq("user_id", state.userId).select().single()
     : supabase.from("finance_transactions").insert(payload).select().single();
-  const { data, error } = await query;
+  let result;
+  try {
+    result = await query;
+  } catch (requestError) {
+    $("saveTransaction").disabled = false;
+    $("formError").textContent = "حصل خطأ في الاتصال أثناء الحفظ. جرّب تاني.";
+    console.error("Finance transaction request failed:", requestError);
+    return;
+  }
+  const { data, error } = result;
   $("saveTransaction").disabled = false;
-  if (error) { $("formError").textContent = state.editingId ? "تعذر تعديل العملية." : "تعذر حفظ العملية. تأكد من تنفيذ ملف إعداد قاعدة البيانات."; return; }
+  if (error) { $("formError").textContent = (state.editingId ? "تعذر تعديل العملية: " : "تعذر حفظ العملية: ") + (error.message || "راجع إعدادات قاعدة البيانات والصلاحيات."); console.error("Finance transaction save error:", error); return; }
   const wasEditing = Boolean(state.editingId);
   if (state.editingId) {
     state.transactions = state.transactions.map(tx => tx.id === data.id ? data : tx);
