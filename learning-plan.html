@@ -50,15 +50,6 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
 @media(max-width:760px){.stats-grid{grid-template-columns:repeat(2,1fr)}.carryover-label{white-space:normal}}
 @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}.two{grid-template-columns:1fr}.wrap{padding:18px 12px 45px}}
 
-/* Shared bottom navigation */
-body{padding-bottom:100px}
-.app-nav{position:fixed;z-index:1000;bottom:14px;left:50%;transform:translateX(-50%);width:min(440px,calc(100% - 24px));display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;border:1px solid rgba(154,190,236,.22);border-radius:20px;background:rgba(9,19,34,.92);box-shadow:0 12px 40px #0008;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);direction:rtl}
-.app-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:58px;padding:5px 8px;border-radius:13px;color:#9aabc4;text-decoration:none;font-size:12px;transition:background .18s,color .18s}
-.app-nav svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.app-nav a.active{color:#dceaff;background:rgba(67,119,190,.28);box-shadow:inset 0 0 0 1px rgba(115,167,255,.28)}
-.app-nav a:focus-visible{outline:2px solid #73a7ff;outline-offset:2px}
-@media(min-width:900px){.app-nav{bottom:18px}}
-@media(max-width:420px){.app-nav{bottom:8px;width:calc(100% - 16px);padding:6px}.app-nav a{min-height:54px;font-size:11px}}
 </style>
 </head>
 <body>
@@ -553,10 +544,6 @@ document.addEventListener("visibilitychange", () => {
 </script>
 
 <script type="module" src="/assets/plan-session.js"></script>
-<nav class="app-nav" aria-label="التنقل الرئيسي">
- <a href="/dashboard.html" class="" ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>الرئيسية</span></a>
- <a href="/learning-plan.html" class="active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 0 4 22z"/><path d="M4 5.5v14A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h8"/></svg><span>خطة التعلم</span></a>
- <a href="/finance.html" class="" ><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M16 14h2"/></svg><span>المحفظة</span></a>
-</nav>
+
 </body>
 </html>
