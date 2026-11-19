@@ -16,6 +16,16 @@ input{width:100%;background:#0d1728;border:1px solid var(--line);border-radius:9
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}button,.plan-link{display:inline-block;border:1px solid var(--line);background:#17243a;color:var(--text);padding:10px 16px;border-radius:10px;font:inherit;cursor:pointer;text-decoration:none}
 button.primary{background:#244a80;border-color:#3568a9}button:disabled{opacity:.55;cursor:wait}button:hover,.plan-link:hover{border-color:#73a7ff}a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #73a7ff;outline-offset:3px}
 .plan-link{margin-top:20px}@media(max-width:600px){main{margin:24px auto}.two{grid-template-columns:1fr;gap:0}.card{padding:18px}}
+
+body{background:radial-gradient(ellipse at 15% 12%,rgba(61,111,190,.26),transparent 42%),radial-gradient(ellipse at 85% 75%,rgba(65,191,163,.14),transparent 38%),linear-gradient(145deg,#07101f,#0c1930 58%,#101b30)}
+main{max-width:760px;margin:10vh auto}
+header{margin-bottom:22px}
+.card{background:linear-gradient(145deg,rgba(25,40,64,.82),rgba(14,25,43,.76));border:1px solid rgba(154,190,236,.18);border-radius:22px;box-shadow:0 18px 55px rgba(0,0,0,.24);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+input{background:rgba(7,17,32,.7);border-color:rgba(154,190,236,.2)}
+button,.plan-link{background:rgba(31,49,76,.78);border-color:rgba(154,190,236,.2);transition:transform .18s ease,border-color .18s ease}
+button:hover,.plan-link:hover{transform:translateY(-1px);border-color:#73a7ff}
+button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:rgba(142,190,255,.45)}
+@media(max-width:600px){main{margin:32px auto}}
 </style>
 </head>
 <body>
