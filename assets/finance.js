@@ -628,13 +628,13 @@ $("transactionForm").addEventListener("submit", async event => {
 });
 $("signOut").addEventListener("click", async () => {
   const { error } = await supabase.auth.signOut();
-  if (!error) window.location.replace("/index.html");
+  if (!error) window.location.replace("/");
   else setStatus("تعذر تسجيل الخروج.", true);
 });
 
 const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
 if (sessionError || !sessionData.session) {
-  window.location.replace("/index.html");
+  window.location.replace("/");
 } else {
   state.userId = sessionData.session.user.id;
   await loadTransactions();
