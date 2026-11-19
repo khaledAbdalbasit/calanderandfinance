@@ -1,5 +1,6 @@
 import { supabase } from "./supabase.js";
 import { requireProduct } from "./product-access.js";
+import { getCachedRows, putCachedRow, deleteCachedRow, queueOfflineChange, getPendingChanges, syncOfflineQueue } from "./offline-store.js";
 
 if (await requireProduct("finance")) {
 
@@ -231,24 +232,56 @@ function renderInsights() {
   if (!target.children.length) addInsight("الأمور مستقرة", "لا توجد زيادات كبيرة أو تجاوزات في الميزانيات المسجلة حتى الآن.");
 }
 async function loadBudgets() {
-  const { data, error } = await supabase.from("finance_budgets").select("*")
-    .eq("user_id", state.userId).eq("budget_month", selectedMonth() + 1).eq("budget_year", selectedYear()).order("category");
-  if (error) {
-    $("budgetError").textContent = "تعذر تحميل الميزانيات. تأكد من تنفيذ ملف finance-budgets-schema.sql في Supabase.";
-    state.budgets = [];
-  } else {
-    $("budgetError").textContent = "";
-    state.budgets = data || [];
+  try {
+    const cached = await getCachedRows("budgets", state.userId);
+    state.budgets = cached.filter(item =>
+      item.budget_month === selectedMonth() + 1 && item.budget_year === selectedYear()
+    );
+    renderBudgets(); renderInsights();
+  } catch (error) {
+    console.error("Offline budgets cache unavailable:", error);
   }
-  renderBudgets();
-  renderInsights();
+
+  if (!navigator.onLine) {
+    $("budgetError").textContent = "Offline — بنعرض آخر ميزانيات محفوظة على الجهاز.";
+    return;
+  }
+
+  try {
+    await syncOfflineQueue(supabase, state.userId);
+    const { data, error } = await supabase.from("finance_budgets").select("*")
+      .eq("user_id", state.userId).eq("budget_month", selectedMonth() + 1)
+      .eq("budget_year", selectedYear()).order("category");
+    if (error) throw error;
+    const pending = await getPendingChanges(state.userId);
+    const pendingUpserts = pending.filter(item => item.type === "budget-upsert").map(item => item.payload);
+    const pendingDeletes = new Set(pending.filter(item => item.type === "budget-delete").map(item => item.payload.id));
+    const pendingIds = new Set(pendingUpserts.map(item => item.id));
+    state.budgets = [
+      ...(data || []).filter(item => !pendingDeletes.has(item.id) && !pendingIds.has(item.id)),
+      ...pendingUpserts.filter(item => item.budget_month === selectedMonth() + 1 && item.budget_year === selectedYear())
+    ];
+    await Promise.all((data || []).map(row => putCachedRow("budgets", row)));
+    $("budgetError").textContent = pending.length ? "بعض التغييرات ما زالت تنتظر المزامنة." : "";
+  } catch (error) {
+    console.error("Budget load failed; local cache remains active:", error);
+    $("budgetError").textContent = "تعذر الاتصال — بنستخدم آخر نسخة محفوظة.";
+  }
+  renderBudgets(); renderInsights();
 }
+
 async function deleteBudget(id) {
   if (!window.confirm("متأكد إنك عايز تحذف الميزانية دي؟")) return;
-  const { error } = await supabase.from("finance_budgets").delete().eq("id", id).eq("user_id", state.userId);
-  if (error) { $("budgetError").textContent = "تعذر حذف الميزانية."; return; }
-  state.budgets = state.budgets.filter(item => item.id !== id);
-  renderBudgets(); renderInsights();
+  try {
+    await deleteCachedRow("budgets", id);
+    await queueOfflineChange(`budget:${state.userId}:${id}`, state.userId, "budget-delete", { id });
+    state.budgets = state.budgets.filter(item => item.id !== id);
+    renderBudgets(); renderInsights();
+    if (navigator.onLine) await syncOfflineQueue(supabase, state.userId);
+  } catch (error) {
+    console.error("Offline budget delete failed:", error);
+    $("budgetError").textContent = "تعذر حذف الميزانية من التخزين المحلي.";
+  }
 }
 
 function renderYearComparison() {
@@ -408,22 +441,56 @@ function render() {
 }
 async function loadTransactions() {
   setStatus("جارٍ تحميل بياناتك...");
-  const { data, error } = await supabase.from("finance_transactions").select("*").eq("user_id", state.userId).order("transaction_date", { ascending: false });
-  if (error) {
-    setStatus("تعذر تحميل البيانات. تأكد من تنفيذ إعدادات قاعدة البيانات في Supabase.", true);
+  try {
+    state.transactions = await getCachedRows("transactions", state.userId);
+    fillFilters(); renderSuggestions(); render();
+  } catch (error) {
+    console.error("Offline transaction cache unavailable:", error);
+  }
+
+  if (!navigator.onLine) {
+    setStatus("أنت Offline — بتعرض البيانات المحفوظة على الجهاز.");
     return;
   }
-  state.transactions = data || [];
-  fillFilters(); renderSuggestions(); render();
-  setStatus("تم تحميل " + state.transactions.length + " عملية.");
+
+  try {
+    await syncOfflineQueue(supabase, state.userId);
+    const { data, error } = await supabase.from("finance_transactions").select("*")
+      .eq("user_id", state.userId).order("transaction_date", { ascending: false });
+    if (error) throw error;
+    const pending = await getPendingChanges(state.userId);
+    const pendingUpserts = pending.filter(item => item.type === "transaction-upsert").map(item => item.payload);
+    const pendingDeletes = new Set(pending.filter(item => item.type === "transaction-delete").map(item => item.payload.id));
+    const pendingIds = new Set(pendingUpserts.map(item => item.id));
+    state.transactions = [
+      ...(data || []).filter(item => !pendingDeletes.has(item.id) && !pendingIds.has(item.id)),
+      ...pendingUpserts
+    ];
+    await Promise.all((data || []).map(row => putCachedRow("transactions", row)));
+    fillFilters(); renderSuggestions(); render();
+    setStatus(pending.length ? "تم تحميل البيانات، وهناك تغييرات تنتظر المزامنة." : "تم تحميل " + state.transactions.length + " عملية.");
+  } catch (error) {
+    console.error("Finance load failed; local cache remains active:", error);
+    setStatus("تعذر الاتصال بـ Supabase — بتستخدم آخر نسخة محفوظة على الجهاز.", true);
+  }
 }
 async function deleteTransaction(id) {
   if (!window.confirm("متأكد إنك عايز تحذف العملية دي؟")) return;
-  const { error } = await supabase.from("finance_transactions").delete().eq("id", id).eq("user_id", state.userId);
-  if (error) { setStatus("تعذر حذف العملية.", true); return; }
-  state.transactions = state.transactions.filter(tx => tx.id !== id);
-  if (state.editingId === id) resetTransactionForm();
-  renderSuggestions(); render(); setStatus("تم حذف العملية.");
+  try {
+    await deleteCachedRow("transactions", id);
+    await queueOfflineChange(`tx:${state.userId}:${id}`, state.userId, "transaction-delete", { id });
+    state.transactions = state.transactions.filter(tx => tx.id !== id);
+    if (state.editingId === id) resetTransactionForm();
+    renderSuggestions(); render();
+    setStatus(navigator.onLine ? "تم الحذف محليًا وجارٍ المزامنة." : "تم الحذف على الجهاز — هيتزامن لما الإنترنت يرجع.");
+    if (navigator.onLine) {
+      await syncOfflineQueue(supabase, state.userId);
+      await loadTransactions();
+    }
+  } catch (error) {
+    console.error("Offline transaction delete failed:", error);
+    setStatus("تعذر حذف العملية من التخزين المحلي.", true);
+  }
 }
 function setType(type) {
   state.type = type;
@@ -450,20 +517,46 @@ $("budgetForm").addEventListener("submit", async event => {
     $("budgetError").textContent = "اكتب تصنيفًا ومبلغًا صحيحًا أكبر من صفر.";
     return;
   }
+
+  const existing = state.budgets.find(item =>
+    item.category.toLocaleLowerCase() === category.toLocaleLowerCase() &&
+    item.budget_month === selectedMonth() + 1 && item.budget_year === selectedYear()
+  );
+  const now = new Date().toISOString();
+  const payload = {
+    id: existing?.id || crypto.randomUUID(),
+    user_id: state.userId,
+    category,
+    amount: Number(amount.toFixed(2)),
+    budget_month: selectedMonth() + 1,
+    budget_year: selectedYear(),
+    created_at: existing?.created_at || now,
+    updated_at: now
+  };
+
   $("saveBudget").disabled = true;
-  const payload = { user_id: state.userId, category, amount: Number(amount.toFixed(2)), budget_month: selectedMonth() + 1, budget_year: selectedYear() };
-  const { data, error } = await supabase.from("finance_budgets").upsert(payload, { onConflict: "user_id,category,budget_month,budget_year" }).select().single();
-  $("saveBudget").disabled = false;
-  if (error) {
-    $("budgetError").textContent = "تعذر حفظ الميزانية: " + (error.message || "راجع إعدادات قاعدة البيانات.");
-    return;
+  try {
+    await putCachedRow("budgets", payload);
+    await queueOfflineChange(`budget:${state.userId}:${payload.id}`, state.userId, "budget-upsert", payload);
+    state.budgets = [...state.budgets.filter(item => item.id !== payload.id &&
+      !(item.category.toLocaleLowerCase() === category.toLocaleLowerCase())), payload]
+      .sort((a,b) => a.category.localeCompare(b.category));
+    $("budgetForm").reset();
+    renderBudgets(); renderInsights();
+    $("budgetError").textContent = navigator.onLine
+      ? "تم الحفظ محليًا وجارٍ المزامنة."
+      : "تم الحفظ على الجهاز — هيتزامن لما الإنترنت يرجع.";
+    if (navigator.onLine) {
+      await syncOfflineQueue(supabase, state.userId);
+      $("budgetError").textContent = "";
+    }
+  } catch (error) {
+    console.error("Budget save failed:", error);
+    $("budgetError").textContent = "تعذر حفظ الميزانية محليًا.";
+  } finally {
+    $("saveBudget").disabled = false;
   }
-  state.budgets = [...state.budgets.filter(item => item.id !== data.id && !(item.category.toLocaleLowerCase() === data.category.toLocaleLowerCase())), data].sort((a,b) => a.category.localeCompare(b.category));
-  $("budgetForm").reset();
-  renderBudgets(); renderInsights();
 });
-$("transactionDate").value = localDate(today);
-state.rows.push({ name: "", amount: "" }); renderItems();
 $("transactionForm").addEventListener("submit", async event => {
   event.preventDefault();
   $("formError").textContent = "";
@@ -482,41 +575,54 @@ $("transactionForm").addEventListener("submit", async event => {
     }
     amount = details.reduce((total, item) => total + item.amount, 0);
   }
+
+  const now = new Date().toISOString();
+  const id = state.editingId || crypto.randomUUID();
+  const previous = state.transactions.find(tx => tx.id === id);
   const payload = {
-    user_id: state.userId, type: state.type, entry_mode: state.hasDetails ? "detailed" : "package",
-    category, amount: Number(amount.toFixed(2)), transaction_date: date,
-    details, note: $("note").value.trim() || null
+    id,
+    user_id: state.userId,
+    type: state.type,
+    entry_mode: state.hasDetails ? "detailed" : "package",
+    category,
+    amount: Number(amount.toFixed(2)),
+    transaction_date: date,
+    details,
+    note: $("note").value.trim() || null,
+    created_at: previous?.created_at || now,
+    updated_at: now
   };
+
   $("saveTransaction").disabled = true;
-  const query = state.editingId
-    ? supabase.from("finance_transactions").update(payload).eq("id", state.editingId).eq("user_id", state.userId).select().single()
-    : supabase.from("finance_transactions").insert(payload).select().single();
-  let result;
   try {
-    result = await query;
-  } catch (requestError) {
+    await putCachedRow("transactions", payload);
+    await queueOfflineChange(`tx:${state.userId}:${id}`, state.userId, "transaction-upsert", payload);
+    const wasEditing = Boolean(state.editingId);
+    state.transactions = wasEditing
+      ? state.transactions.map(tx => tx.id === id ? payload : tx)
+      : [payload, ...state.transactions];
+    resetTransactionForm();
+    const savedDate = new Date(payload.transaction_date + "T00:00:00");
+    $("yearFilter").value = String(savedDate.getFullYear());
+    $("monthFilter").value = String(savedDate.getMonth());
+    state.allTime = false;
+    fillFilters(); renderSuggestions(); render();
+    $("formError").textContent = "";
+    setStatus(navigator.onLine ? "تم الحفظ على الجهاز وجارٍ المزامنة." : "تم الحفظ بدون إنترنت — هيتزامن تلقائيًا لما الاتصال يرجع.");
+    if (navigator.onLine) {
+      try {
+        await syncOfflineQueue(supabase, state.userId);
+        setStatus(wasEditing ? "تم تحديث العملية ومزامنتها." : "تم حفظ العملية ومزامنتها.");
+      } catch (syncError) {
+        console.error("Transaction queued for later sync:", syncError);
+      }
+    }
+  } catch (error) {
+    console.error("Local transaction save failed:", error);
+    $("formError").textContent = "تعذر حفظ العملية على الجهاز. تأكد من مساحة التخزين المتاحة.";
+  } finally {
     $("saveTransaction").disabled = false;
-    $("formError").textContent = "حصل خطأ في الاتصال أثناء الحفظ. جرّب تاني.";
-    console.error("Finance transaction request failed:", requestError);
-    return;
   }
-  const { data, error } = result;
-  $("saveTransaction").disabled = false;
-  if (error) { $("formError").textContent = (state.editingId ? "تعذر تعديل العملية: " : "تعذر حفظ العملية: ") + (error.message || "راجع إعدادات قاعدة البيانات والصلاحيات."); console.error("Finance transaction save error:", error); return; }
-  const wasEditing = Boolean(state.editingId);
-  if (state.editingId) {
-    state.transactions = state.transactions.map(tx => tx.id === data.id ? data : tx);
-  } else {
-    state.transactions.unshift(data);
-  }
-  resetTransactionForm();
-  const savedDate = new Date(data.transaction_date + "T00:00:00");
-  $("yearFilter").value = String(savedDate.getFullYear());
-  $("monthFilter").value = String(savedDate.getMonth());
-  state.allTime = false;
-  fillFilters(); renderSuggestions(); render();
-  await loadBudgets();
-  setStatus(wasEditing ? "تم تحديث العملية." : "تم حفظ العملية بنجاح.");
 });
 $("signOut").addEventListener("click", async () => {
   const { error } = await supabase.auth.signOut();
@@ -531,6 +637,12 @@ if (sessionError || !sessionData.session) {
   state.userId = sessionData.session.user.id;
   await loadTransactions();
   await loadBudgets();
+window.addEventListener("app-online", async () => {
+  if (!state.userId) return;
+  await loadTransactions();
+  await loadBudgets();
+});
+
 }
 
 }

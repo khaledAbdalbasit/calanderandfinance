@@ -1,19 +1,29 @@
 import { supabase } from "./supabase.js";
 
+const cacheKey = userId => `productAccess:${userId}`;
+
 export async function getProductAccess(userId) {
-  const { data, error } = await supabase
-    .from("user_products")
-    .select("finance_enabled,todo_enabled")
-    .eq("user_id", userId)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from("user_products")
+      .select("finance_enabled,todo_enabled")
+      .eq("user_id", userId)
+      .maybeSingle();
 
-  if (error) throw error;
-  if (!data) throw new Error("Product access is not configured for this account.");
+    if (error) throw error;
+    if (!data) throw new Error("Product access is not configured for this account.");
 
-  return {
-    finance: Boolean(data.finance_enabled),
-    todo: Boolean(data.todo_enabled)
-  };
+    const access = {
+      finance: Boolean(data.finance_enabled),
+      todo: Boolean(data.todo_enabled)
+    };
+    localStorage.setItem(cacheKey(userId), JSON.stringify(access));
+    return access;
+  } catch (error) {
+    const cached = localStorage.getItem(cacheKey(userId));
+    if (!cached) throw error;
+    return JSON.parse(cached);
+  }
 }
 
 export async function redirectToUserHome(user) {
