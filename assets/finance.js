@@ -31,7 +31,7 @@ function setStatus(message, error = false) {
 function renderMode() {
   $("packageFields").hidden = state.hasDetails;
   $("detailedFields").hidden = !state.hasDetails;
-  $("toggleDetails").textContent = state.hasDetails ? "− إخفاء التفاصيل" : "+ إضافة تفاصيل (اختياري)";
+  $("toggleDetails").textContent = state.hasDetails ? "− إخفاء التفاصيل" : "+ تفاصيل إضافية (اختياري)";
   $("toggleDetails").setAttribute("aria-expanded", String(state.hasDetails));
 }
 function renderItems() {
@@ -116,7 +116,8 @@ function renderCategories(list) {
   $("categoryBreakdown").replaceChildren();
   $("categoryPeriod").textContent = state.allTime ? "كل الشهور" : monthNames[selectedMonth()] + " " + selectedYear();
   if (!sorted.length) {
-    $("categoryBreakdown").innerHTML = '<div class="empty">لا توجد مصروفات في الفترة دي.</div>';
+    $("categoryBreakdown").innerHTML = '<div class="empty"><p>لسه مفيش مصروفات مسجلة في الفترة دي.</p><button type="button" class="primary" data-add-transaction>سجّل أول مصروف</button></div>';
+    $("categoryBreakdown").querySelector("[data-add-transaction]").addEventListener("click", () => document.querySelector('.finance-tab[data-view="add"]').click());
     return;
   }
   sorted.forEach(([category, amount]) => {
@@ -392,7 +393,7 @@ function resetTransactionForm() {
   state.editingId = null; state.hasDetails = false; state.rows = [{name:"",amount:""}];
   $("transactionForm").reset(); $("transactionDate").value = localDate(today);
   renderItems(); renderMode(); setType("expense");
-  $("formTitle").textContent = "إضافة عملية جديدة";
+  $("formTitle").textContent = "إضافة مصروف أو دخل";
   $("saveTransaction").textContent = "حفظ العملية";
   $("cancelEdit").hidden = true;
   $("formError").textContent = "";
@@ -402,7 +403,8 @@ function renderTransactions(list) {
   $("listPeriod").textContent = state.allTime ? "كل الشهور" : monthNames[selectedMonth()] + " " + selectedYear();
   const ordered = [...list].sort((a,b) => b.transaction_date.localeCompare(a.transaction_date) || b.created_at.localeCompare(a.created_at));
   if (!ordered.length) {
-    $("transactionsList").innerHTML = '<div class="empty">لسه مفيش عمليات في الفترة دي. ابدأ بإضافة أول عملية.</div>';
+    $("transactionsList").innerHTML = '<div class="empty"><p>مفيش عمليات مسجلة في الفترة دي. أول ما تضيف عملية هتظهر هنا.</p><button type="button" class="primary" data-add-transaction>إضافة مصروف أو دخل</button></div>';
+    $("transactionsList").querySelector("[data-add-transaction]").addEventListener("click", () => document.querySelector('.finance-tab[data-view="add"]').click());
     return;
   }
   ordered.forEach(tx => {

@@ -115,7 +115,7 @@ body{padding-bottom:112px}
 </head>
 <body>
 <main class="wrap">
-<header class="top"><div><h1>المحفظة الشخصية</h1><p class="muted">تابع دخلك ومصاريفك واعرف فلوسك بتروح فين.</p></div><div class="actions"><a href="/dashboard.html">الصفحة الرئيسية</a><button id="signOut">تسجيل الخروج</button></div></header>
+<header class="top"><div><h1>محفظتي</h1><p class="muted">سجّل فلوسك بسهولة، وتابع دخلك ومصاريفك من مكان واحد.</p></div><div class="actions"><a href="/dashboard.html">الصفحة الرئيسية</a><button id="signOut">تسجيل الخروج</button></div></header>
 <section class="stats finance-view" id="view-summary">
  <div class="stat"><small>إجمالي الدخل</small><strong id="incomeTotal" class="positive">0 ج.م</strong></div>
  <div class="stat"><small>إجمالي المصروفات</small><strong id="expenseTotal" class="negative">0 ج.م</strong></div>
@@ -125,17 +125,17 @@ body{padding-bottom:112px}
 <div class="filters">
  <div class="field"><label for="monthFilter">الشهر</label><select id="monthFilter"></select></div>
  <div class="field"><label for="yearFilter">السنة</label><select id="yearFilter"></select></div>
- <button id="allTimeFilter">كل العمليات</button>
+ <button id="allTimeFilter">كل الفترات</button>
  <span id="loadStatus" class="muted" role="status" aria-live="polite"></span>
 </div>
 <div class="layout">
 <section class="panel finance-view" id="view-add" hidden>
- <div class="section-head"><h2 id="formTitle">إضافة عملية جديدة</h2><button type="button" id="cancelEdit" hidden>إلغاء التعديل</button></div>
+ <div class="section-head"><h2 id="formTitle">إضافة مصروف أو دخل</h2><button type="button" id="cancelEdit" hidden>إلغاء التعديل</button></div>
  <form id="transactionForm">
   <div class="segmented"><button type="button" class="active" data-type="expense">مصروف</button><button type="button" data-type="income">دخل</button></div>
-  <div class="field"><label for="category">البند الرئيسي</label><input id="category" list="categorySuggestions" maxlength="80" required placeholder="مثال: فطار، مواصلات، مرتب"><datalist id="categorySuggestions"></datalist></div>
+  <div class="field"><label for="category">صرفته أو استلمته في إيه؟</label><input id="category" list="categorySuggestions" maxlength="80" required placeholder="مثال: أكل، مواصلات، مرتب"><datalist id="categorySuggestions"></datalist><small class="muted">اكتب تصنيف بسيط، أو اختار من التصنيفات اللي استخدمتها قبل كده.</small></div>
   <div id="packageFields"><div class="field"><label for="amount">المبلغ بالجنيه</label><input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="مثال: 30"></div></div>
-  <button type="button" class="toggle-details" id="toggleDetails" aria-expanded="false">+ إضافة تفاصيل (اختياري)</button>
+  <button type="button" class="toggle-details" id="toggleDetails" aria-expanded="false">+ تفاصيل إضافية (اختياري)</button>
   <div id="detailedFields" class="details-box" hidden><div class="section-head"><strong>تفاصيل بندك</strong><button type="button" id="addItem">+ إضافة عنصر</button></div><div id="items"></div><div class="total-preview"><span>الإجمالي</span><strong id="detailsTotal">0.00 ج.م</strong></div></div>
   <div class="two"><div class="field"><label for="transactionDate">التاريخ</label><input id="transactionDate" type="date" required></div><div class="field"><label for="note">ملاحظة (اختياري)</label><input id="note" maxlength="240" placeholder="تفاصيل إضافية"></div></div>
   <p id="formError" class="error" role="alert"></p><div class="actions"><button class="primary" id="saveTransaction" type="submit">حفظ العملية</button></div>
@@ -149,8 +149,8 @@ body{padding-bottom:112px}
  <section class="panel finance-view" id="view-budgets" style="margin-top:14px" hidden>
   <div class="section-head"><h2>الميزانية الشهرية</h2><span class="muted" id="budgetPeriod"></span></div>
   <form id="budgetForm" class="budget-form">
-   <div class="field"><label for="budgetCategory">التصنيف</label><input id="budgetCategory" list="categorySuggestions" maxlength="80" required placeholder="مثال: الأكل"></div>
-   <div class="field"><label for="budgetAmount">الحد الشهري (ج.م)</label><input id="budgetAmount" type="number" min="1" step="0.01" required placeholder="2000"></div>
+   <div class="field"><label for="budgetCategory">هتحدد ميزانية لإيه؟</label><input id="budgetCategory" list="categorySuggestions" maxlength="80" required placeholder="مثال: الأكل"></div>
+   <div class="field"><label for="budgetAmount">أقصى مبلغ في الشهر (ج.م)</label><input id="budgetAmount" type="number" min="1" step="0.01" required placeholder="2000"></div>
    <button class="primary" id="saveBudget" type="submit">حفظ الميزانية</button>
   </form>
   <p id="budgetError" class="error" role="alert"></p>
@@ -160,20 +160,20 @@ body{padding-bottom:112px}
   <div class="section-head"><h2>تحليل مالي واقتراحات</h2><span class="muted" id="insightPeriod"></span></div>
   <div id="financialInsights"></div>
  </section>
- <section class="panel" style="margin-top:14px">
+ <section class="panel finance-view" data-view="analysis" hidden style="margin-top:14px">
   <div class="section-head"><h2>مصروفات كل يوم</h2><span class="muted" id="dailyPeriod"></span></div>
   <div class="chart-scroll"><div class="daily-chart" id="dailyChart"></div></div>
-  <div class="average-note" id="dailyAverage"></div><div class="muted" style="font-size:12px;margin-top:6px">الأحمر: أعلى من متوسط اليوم · الأزرق: أقل من المتوسط أو لا يوجد صرف</div>
+  <div class="average-note" id="dailyAverage"></div><div class="muted" style="font-size:12px;margin-top:6px">الأحمر يعني إن مصروفات اليوم أعلى من متوسطك، والأزرق أقل أو مفيش مصروفات.</div>
   <div class="day-detail"><div class="section-head"><h3 id="selectedDayTitle" style="margin:0;font-size:16px">تفاصيل اليوم</h3><strong id="selectedDayTotal"></strong></div><div id="selectedDayTransactions"></div></div>
  </section>
- <section class="panel" style="margin-top:14px">
+ <section class="panel finance-view" data-view="analysis" hidden style="margin-top:14px">
   <div class="section-head"><h2>مقارنة شهور السنة</h2><span class="muted">الدخل والمصروفات</span></div>
   <div class="chart-scroll"><div class="month-bars" id="yearComparison"></div></div>
   <div class="muted" style="font-size:12px">الأخضر: الدخل — الأحمر: المصروفات</div>
  </section>
  </section>
  <section class="panel finance-view" id="view-transactions" style="margin-top:14px" hidden>
-  <div class="section-head"><h2>العمليات</h2><span class="muted" id="listPeriod"></span></div><div id="transactionsList"></div>
+  <div class="section-head"><h2>سجل العمليات</h2><span class="muted" id="listPeriod"></span></div><div id="transactionsList"></div>
  </section>
 </div>
 </div>
@@ -181,16 +181,18 @@ body{padding-bottom:112px}
 <nav class="finance-nav" aria-label="أقسام المحفظة">
  <button type="button" class="finance-tab active" data-view="overview" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>ملخص</span></button>
  <button type="button" class="finance-tab" data-view="add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>إضافة</span></button>
- <button type="button" class="finance-tab" data-view="budgets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M7 15l4-4 3 2 5-6"/></svg><span>الميزانيات</span></button>
- <button type="button" class="finance-tab" data-view="analysis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M7 15l3-4 3 2 4-7"/></svg><span>التحليل</span></button>
- <button type="button" class="finance-tab" data-view="transactions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>العمليات</span></button>
+ <button type="button" class="finance-tab" data-view="budgets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M7 15l4-4 3 2 5-6"/></svg><span>الميزانية</span></button>
+ <button type="button" class="finance-tab" data-view="analysis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M7 15l3-4 3 2 4-7"/></svg><span>التقارير</span></button>
+ <button type="button" class="finance-tab" data-view="transactions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>السجل</span></button>
 </nav>
 <script>
  document.querySelectorAll(".finance-tab").forEach(button => {
   button.addEventListener("click", () => {
    const view = button.dataset.view;
    document.querySelectorAll(".finance-view").forEach(section => {
-    section.hidden = section.id !== "view-" + view && !(view === "overview" && section.id === "view-summary");
+    const sectionView = section.dataset.view || section.id.replace("view-", "");
+    const isVisible = sectionView === view || (view === "overview" && section.id === "view-summary");
+    section.hidden = !isVisible;
    });
    document.querySelectorAll(".finance-tab").forEach(tab => {
     const active = tab === button;
