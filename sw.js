@@ -1,4 +1,4 @@
-const CACHE_NAME = "personal-dashboard-v3";
+const CACHE_NAME = "personal-dashboard-v4";
 const CACHE_PREFIX = "personal-dashboard-";
 const APP_SHELL = [
   "/index.html",
@@ -19,6 +19,26 @@ const APP_SHELL = [
   "/icons/app-icon.svg",
   "/offline.html"
 ];
+
+function getNavigationCacheKey(url) {
+  let pathname = url.pathname || "/";
+
+  if (pathname === "/") {
+    pathname = "/index.html";
+  } else if (pathname.endsWith("/")) {
+    pathname += "index.html";
+  }
+
+  return new URL(pathname, self.location.origin);
+}
+
+async function getCachedNavigation(cache, pageKey) {
+  return await cache.match(pageKey, { ignoreSearch: true });
+}
+
+async function getOfflineFallback(cache) {
+  return await cache.match("/offline.html");
+}
 
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
@@ -72,17 +92,34 @@ self.addEventListener("fetch", event => {
   if (isAppAsset && request.mode === "navigate") {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_NAME);
-      const pageKey = new URL(url.pathname || "/index.html", self.location.origin);
+      const pageKey = getNavigationCacheKey(url);
 
       try {
         const response = await fetch(request);
-        if (response.ok) await cache.put(pageKey, response.clone());
-        return response;
-      } catch {
-        const cachedPage = await cache.match(pageKey);
+
+        if (response.ok) {
+          try {
+            await cache.put(pageKey, response.clone());
+          } catch (cacheError) {
+            console.warn("Navigation response could not be cached:", pageKey.pathname, cacheError);
+          }
+          return response;
+        }
+
+        const cachedPage = await getCachedNavigation(cache, pageKey);
         if (cachedPage) return cachedPage;
 
-        const offlinePage = await cache.match("/offline.html");
+        if (response.status >= 500) {
+          const offlinePage = await getOfflineFallback(cache);
+          if (offlinePage) return offlinePage;
+        }
+
+        return response;
+      } catch {
+        const cachedPage = await getCachedNavigation(cache, pageKey);
+        if (cachedPage) return cachedPage;
+
+        const offlinePage = await getOfflineFallback(cache);
         if (offlinePage) return offlinePage;
 
         return new Response(
@@ -101,7 +138,11 @@ self.addEventListener("fetch", event => {
     try {
       const response = await fetch(request);
       if (response && (response.ok || response.type === "opaque")) {
-        await cache.put(request, response.clone());
+        try {
+          await cache.put(request, response.clone());
+        } catch (cacheError) {
+          console.warn("Resource could not be cached:", request.url, cacheError);
+        }
       }
       return response;
     } catch {
