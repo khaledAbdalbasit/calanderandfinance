@@ -41,7 +41,7 @@ input,select{width:100%;background:#091526;border:1px solid var(--line);border-r
 </div>
 <div class="layout">
 <section class="panel">
- <div class="section-head"><h2>إضافة عملية جديدة</h2></div>
+ <div class="section-head"><h2 id="formTitle">إضافة عملية جديدة</h2><button type="button" id="cancelEdit" hidden>إلغاء التعديل</button></div>
  <form id="transactionForm">
   <div class="segmented"><button type="button" class="active" data-type="expense">مصروف</button><button type="button" data-type="income">دخل</button></div>
   <div class="field"><label for="category">البند الرئيسي</label><input id="category" list="categorySuggestions" maxlength="80" required placeholder="مثال: فطار، مواصلات، مرتب"><datalist id="categorySuggestions"></datalist></div>
