@@ -33,6 +33,16 @@ export async function loadPlanState(localState, onRemoteUpdate) {
 
   currentUserId = session.user.id;
 
+  const { data: productAccess, error: accessError } = await supabase
+    .from("user_products")
+    .select("todo_enabled")
+    .eq("user_id", currentUserId)
+    .maybeSingle();
+
+  if (accessError || !productAccess?.todo_enabled) {
+    throw accessError || new Error("هذا الحساب لا يملك صلاحية استخدام To-Do List.");
+  }
+
   const { data, error } = await supabase
     .from("user_learning_plans")
     .select("plan_data")
