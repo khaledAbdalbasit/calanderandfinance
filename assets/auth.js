@@ -31,8 +31,8 @@ function renderSession(session) {
   $("authPassword").required = !user;
 
   if (user) {
-    message(`تم تسجيل الدخول: ${user.email || ""} — جارٍ فتح خطتك…`);
-    window.location.replace("/learning-plan.html");
+    message(`تم تسجيل الدخول: ${user.email || ""} — جارٍ فتح حسابك…`);
+    window.location.replace("/dashboard.html");
   } else {
     message("سجّل الدخول أو أنشئ حسابًا جديدًا للوصول إلى خطتك.");
   }
@@ -87,7 +87,7 @@ async function authenticate(action) {
       if (error) throw error;
 
       if (data.session) {
-        window.location.replace("/learning-plan.html");
+        window.location.replace("/dashboard.html");
       } else {
         message("تم إنشاء الحساب. افتح رسالة التفعيل التي أرسلناها إلى بريدك الإلكتروني، ثم اضغط رابط التأكيد لتفعيل الحساب.");
         $("authPassword").value = "";
