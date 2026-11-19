@@ -5,8 +5,18 @@ let saveTimer = null;
 let channel = null;
 let latestState = null;
 
+export function getUserPlanStorageKey() {
+  return currentUserId ? `learningPlanState:${currentUserId}` : null;
+}
+
+function saveLocalPlan(state) {
+  const key = getUserPlanStorageKey();
+  if (key) localStorage.setItem(key, JSON.stringify(state));
+}
+
 async function savePlanNow(state) {
   if (!currentUserId) return;
+  saveLocalPlan(state);
   const { error } = await supabase
     .from("user_learning_plans")
     .upsert(
@@ -32,6 +42,14 @@ export async function loadPlanState(localState, onRemoteUpdate) {
   }
 
   currentUserId = session.user.id;
+  const userStorageKey = getUserPlanStorageKey();
+  let cachedState = null;
+  try {
+    const cached = localStorage.getItem(userStorageKey);
+    cachedState = cached ? JSON.parse(cached) : null;
+  } catch (cacheError) {
+    console.warn("Ignoring invalid user-scoped local plan cache:", cacheError);
+  }
 
   const { data, error } = await supabase
     .from("user_learning_plans")
@@ -41,9 +59,11 @@ export async function loadPlanState(localState, onRemoteUpdate) {
 
   let initialState;
   if (!error && data?.plan_data && typeof data.plan_data === "object") {
-    initialState = { ...localState, ...data.plan_data };
+    initialState = { ...localState, ...(cachedState || {}), ...data.plan_data };
+    saveLocalPlan(initialState);
   } else {
-    initialState = localState;
+    initialState = cachedState || localState;
+    saveLocalPlan(initialState);
     latestState = structuredClone(initialState);
     if (!error) {
       try {
@@ -78,6 +98,7 @@ export async function loadPlanState(localState, onRemoteUpdate) {
 
 export function queuePlanSave(state) {
   if (!currentUserId) return;
+  saveLocalPlan(state);
   clearTimeout(saveTimer);
   latestState = structuredClone(state);
   saveTimer = setTimeout(() => {
