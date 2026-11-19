@@ -127,7 +127,7 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
 <footer>تقدمك وملاحظاتك ومهامك تتم مزامنتها تلقائيًا مع حسابك. استخدم «تصدير التقدم JSON» للاحتفاظ بنسخة احتياطية.</footer>
 </div>
 <script type="module">
-import { loadPlanState, queuePlanSave } from "./assets/plan-sync.js";
+import { loadPlanState, queuePlanSave, getUserPlanStorageKey } from "./assets/plan-sync.js";
 import {
   initializeWeeklyCycles,
   startWeeklyCycle,
@@ -162,7 +162,8 @@ function defaultState(p) {
 }
 
 function save() {
-  localStorage.setItem("learningPlanState", JSON.stringify(state));
+  const storageKey = getUserPlanStorageKey();
+  if (storageKey) localStorage.setItem(storageKey, JSON.stringify(state));
   queuePlanSave(state);
 }
 
@@ -511,16 +512,14 @@ async function init() {
     plan = embeddedPlan;
   }
 
-  const saved = localStorage.getItem("learningPlanState");
-  const localState = saved
-    ? { ...defaultState(plan), ...JSON.parse(saved) }
-    : defaultState(plan);
+  const localState = defaultState(plan);
 
   state = await loadPlanState(localState, remoteState => {
     state = { ...defaultState(plan), ...remoteState };
     initializeWeeklyCycles(state, plan);
     maintainWeeklyCycle();
-    localStorage.setItem("learningPlanState", JSON.stringify(state));
+    const storageKey = getUserPlanStorageKey();
+    if (storageKey) localStorage.setItem(storageKey, JSON.stringify(state));
     render();
   });
 
