@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { getProductAccess } from "./product-access.js";
 import {
   getCachedPlan,
   putCachedPlan,
@@ -30,6 +31,8 @@ export async function loadPlanState(localState, onRemoteUpdate, preferLocal = fa
   }
 
   currentUserId = session.user.id;
+  const access = await getProductAccess(currentUserId);
+  if (!access.todo) throw new Error("هذا الحساب لا يملك صلاحية استخدام To-Do List.");
   const cached = await getCachedPlan(currentUserId);
   let initialState = preferLocal || !cached ? localState : cached.state;
   const pending = await getPendingChanges(currentUserId);
