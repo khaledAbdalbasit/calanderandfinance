@@ -135,7 +135,6 @@ button.primary{background:linear-gradient(135deg,#356bb1,#28528b);border-color:r
 </div>
 <script type="module">
 import { loadPlanState, queuePlanSave } from "./assets/plan-sync.js";
-import { supabase } from "./assets/supabase.js";
 import {
   initializeWeeklyCycles,
   startWeeklyCycle,
@@ -158,7 +157,6 @@ if (/^#(?:confirmation_token|recovery_token|invite_token|access_token|email_chan
 let plan = null;
 let state = null;
 let editingTask = null;
-let localStorageKey = null;
 const $ = id => document.getElementById(id);
 
 function defaultState(p) {
@@ -171,7 +169,6 @@ function defaultState(p) {
 }
 
 function save() {
-  if (localStorageKey) localStorage.setItem(localStorageKey, JSON.stringify(state));
   queuePlanSave(state);
 }
 
@@ -520,21 +517,14 @@ async function init() {
     plan = embeddedPlan;
   }
 
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !sessionData.session?.user) throw sessionError || new Error("يجب تسجيل الدخول أولًا.");
-  localStorageKey = `learningPlanState:${sessionData.session.user.id}`;
-  const saved = localStorage.getItem(localStorageKey);
-  const localState = saved
-    ? { ...defaultState(plan), ...JSON.parse(saved) }
-    : defaultState(plan);
+  const localState = defaultState(plan);
 
   state = await loadPlanState(localState, remoteState => {
     state = { ...defaultState(plan), ...remoteState };
     initializeWeeklyCycles(state, plan);
     maintainWeeklyCycle();
-    if (localStorageKey) localStorage.setItem(localStorageKey, JSON.stringify(state));
     render();
-  }, Boolean(saved));
+  });
 
   initializeWeeklyCycles(state, plan);
   advanceWeeklyCycles(state);
