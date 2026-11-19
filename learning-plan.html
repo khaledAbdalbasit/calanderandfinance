@@ -126,12 +126,15 @@ function defaultState(p){return JSON.parse(JSON.stringify(p.tracking||{completed
 function save(){localStorage.setItem("learningPlanState",JSON.stringify(state));queuePlanSave(state);}
 function makeTaskId(){return window.crypto?.randomUUID?.()||("task-"+Date.now()+"-"+Math.random().toString(36).slice(2));}
 function normalizeTaskState(){
- if(!Array.isArray(state.tasksByDay)) state.tasksByDay=plan.weekly_schedule.map((day,di)=>day.tasks.map((text,ti)=>({id:"d"+di+"t"+ti,text})));
- state.tasksByDay=state.tasksByDay.map((tasks,di)=>(Array.isArray(tasks)?tasks:[]).map((task,ti)=>typeof task==="string"?{id:"d"+di+"t"+ti,text:task}:{id:task.id||makeTaskId(),text:String(task.text??"")}));
+ const savedTasks=Array.isArray(state.tasksByDay)?state.tasksByDay:[];
+ state.tasksByDay=plan.weekly_schedule.map((day,di)=>{
+  const tasks=Array.isArray(savedTasks[di])?savedTasks[di]:day.tasks;
+  return tasks.map((task,ti)=>typeof task==="string"?{id:"d"+di+"t"+ti,text:task}:{id:task?.id||makeTaskId(),text:String(task?.text??"")});
+ });
  if(!Array.isArray(state.completedTaskIds)){
   const legacy=new Set(state.completedTasks||[]);
   state.completedTaskIds=[];
-  state.tasksByDay.forEach((tasks,di)=>tasks.forEach((task,ti)=>{if(legacy.has("d"+di+"t"+ti))state.completedTaskIds.push(task.id)}));
+  state.tasksByDay.forEach((tasks,di)=>tasks.forEach(task=>{if(legacy.has("d"+di+"t"+tasks.indexOf(task)))state.completedTaskIds.push(task.id)}));
  }
  state.completedTasks=[];
 }
@@ -207,7 +210,7 @@ $("saveSettings").onclick=()=>{state.startDate=$("startDate").value;state.curren
 $("saveNotes").onclick=()=>{state.weeklyNotes=state.weeklyNotes||{};state.weeklyNotes[state.currentWeek]=$("weeklyNotes").value;state.englishNotes=$("englishNotes").value;save();alert("تم حفظ الملاحظات")};
 $("englishNotes").addEventListener("change",()=>{state.englishNotes=$("englishNotes").value;save()});
 $("exportBtn").onclick=()=>{let copy={...plan,tracking:state};let blob=new Blob([JSON.stringify(copy,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="learning-plan-progress.json";a.click();URL.revokeObjectURL(a.href)};
-$("importFile").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let obj=JSON.parse(await f.text());if(!obj.weekly_schedule||!obj.roadmap||!obj.tracking)throw Error("invalid");plan=obj;state=obj.tracking;save();render();alert("تم استيراد الخطة والتقدم")}catch(err){alert("ملف JSON غير صالح أو لا يحتوي على بيانات الخطة المطلوبة")}};
+$("importFile").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let obj=JSON.parse(await f.text());if(!obj.weekly_schedule||!obj.roadmap||!obj.tracking)throw Error("invalid");plan=obj;state=obj.tracking;normalizeTaskState();save();render();alert("تم استيراد الخطة والتقدم")}catch(err){alert("ملف JSON غير صالح أو لا يحتوي على بيانات الخطة المطلوبة")}};
 $("resetBtn").onclick=()=>{if(confirm("هل تريد إعادة المهام والملاحظات والإعدادات إلى الحالة الأصلية؟")){state=defaultState(plan);normalizeTaskState();save();render()}};
 async function init(){try{let r=await fetch("learning-plan.json");if(!r.ok)throw Error();plan=await r.json();}catch(e){plan=embeddedPlan;}
  let saved=localStorage.getItem("learningPlanState");let localState=saved?{...defaultState(plan),...JSON.parse(saved)}:defaultState(plan);
