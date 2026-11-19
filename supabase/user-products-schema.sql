@@ -73,3 +73,60 @@ insert into public.user_products (user_id, finance_enabled, todo_enabled)
 select id, true, true
 from auth.users
 on conflict (user_id) do nothing;
+
+
+-- Enforce product access at the database level as well as in the UI.
+-- This keeps direct Supabase API calls subject to the same product selection.
+do $$
+declare
+  target_table text;
+  access_column text;
+  existing_policy record;
+begin
+  foreach target_table in array array[
+    'user_learning_plans',
+    'finance_transactions',
+    'finance_budgets'
+  ]
+  loop
+    if to_regclass(format('public.%I', target_table)) is not null then
+      access_column := case
+        when target_table = 'user_learning_plans' then 'todo_enabled'
+        else 'finance_enabled'
+      end;
+
+      execute format('alter table public.%I enable row level security', target_table);
+
+      for existing_policy in
+        select policyname
+        from pg_policies
+        where schemaname = 'public' and tablename = target_table
+      loop
+        execute format('drop policy %I on public.%I', existing_policy.policyname, target_table);
+      end loop;
+
+      execute format(
+        'create policy "Users access own enabled product data" on public.%I
+         for all to authenticated
+         using (
+           auth.uid() = user_id
+           and exists (
+             select 1 from public.user_products up
+             where up.user_id = auth.uid() and up.%I = true
+           )
+         )
+         with check (
+           auth.uid() = user_id
+           and exists (
+             select 1 from public.user_products up
+             where up.user_id = auth.uid() and up.%I = true
+           )
+         )',
+        target_table,
+        access_column,
+        access_column
+      );
+    end if;
+  end loop;
+end;
+$$;
