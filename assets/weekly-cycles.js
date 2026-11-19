@@ -6,6 +6,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
 function normalizeTemplate(state, plan) {
+  const legacyCompleted = state.completedTaskIds || state.completedTasks || [];
+  if (legacyCompleted.length && !state.legacyProgress && !state.weekCycles?.length) {
+    state.legacyProgress = { completedItems: legacyCompleted.length, preservedAt: new Date().toISOString() };
+  }
   const source = Array.isArray(state.weeklyTemplate)
     ? state.weeklyTemplate
     : Array.isArray(state.tasksByDay)
