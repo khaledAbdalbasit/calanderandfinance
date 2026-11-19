@@ -202,6 +202,13 @@ export function getWeeklyStatistics(state) {
     return originCycle && new Date(task.completedAt).getTime() <= new Date(originCycle.endsAt).getTime();
   }).length;
 
+  const activeCycle = getActiveCycle(state);
+  const carryover = activeCycle
+    ? (activeCycle.carryoverTaskIds || []).filter(id => {
+        const task = tasks.find(item => item.id === id);
+        return task && !task.completedAt;
+      }).length
+    : 0;
   const overdue = tasks.filter(task => !task.completedAt).length;
   const weekly = cycles.map(cycle => {
     const weekTasks = (cycle.scheduledTaskIds || [])
@@ -228,6 +235,7 @@ export function getWeeklyStatistics(state) {
     onTimeTotal: scheduledTasks.length,
     onTimeRate: scheduledTasks.length ? Math.round(onTime / scheduledTasks.length * 100) : 0,
     overdue,
+    carryover,
     weekly
   };
 }
