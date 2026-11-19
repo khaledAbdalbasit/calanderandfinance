@@ -637,12 +637,12 @@ if (sessionError || !sessionData.session) {
   state.userId = sessionData.session.user.id;
   await loadTransactions();
   await loadBudgets();
-}
-
-}
-
 window.addEventListener("app-online", async () => {
   if (!state.userId) return;
   await loadTransactions();
   await loadBudgets();
 });
+
+}
+
+}
