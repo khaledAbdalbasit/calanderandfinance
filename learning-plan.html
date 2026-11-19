@@ -151,7 +151,7 @@ import {
 } from "./assets/weekly-cycles.js";
 
 if (/^#(?:confirmation_token|recovery_token|invite_token|access_token|email_change_token)=/.test(window.location.hash)) {
-  window.location.replace('/index.html' + window.location.search + window.location.hash);
+  window.location.replace('/' + window.location.search + window.location.hash);
 }
 
 let plan = null;
