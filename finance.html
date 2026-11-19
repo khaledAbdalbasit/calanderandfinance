@@ -160,13 +160,13 @@ body{padding-bottom:112px}
   <div class="section-head"><h2>تحليل مالي واقتراحات</h2><span class="muted" id="insightPeriod"></span></div>
   <div id="financialInsights"></div>
  </section>
- <section class="panel" style="margin-top:14px">
+ <section class="panel finance-view" data-view="analysis" hidden style="margin-top:14px">
   <div class="section-head"><h2>مصروفات كل يوم</h2><span class="muted" id="dailyPeriod"></span></div>
   <div class="chart-scroll"><div class="daily-chart" id="dailyChart"></div></div>
   <div class="average-note" id="dailyAverage"></div><div class="muted" style="font-size:12px;margin-top:6px">الأحمر يعني إن مصروفات اليوم أعلى من متوسطك، والأزرق أقل أو مفيش مصروفات.</div>
   <div class="day-detail"><div class="section-head"><h3 id="selectedDayTitle" style="margin:0;font-size:16px">تفاصيل اليوم</h3><strong id="selectedDayTotal"></strong></div><div id="selectedDayTransactions"></div></div>
  </section>
- <section class="panel" style="margin-top:14px">
+ <section class="panel finance-view" data-view="analysis" hidden style="margin-top:14px">
   <div class="section-head"><h2>مقارنة شهور السنة</h2><span class="muted">الدخل والمصروفات</span></div>
   <div class="chart-scroll"><div class="month-bars" id="yearComparison"></div></div>
   <div class="muted" style="font-size:12px">الأخضر: الدخل — الأحمر: المصروفات</div>
@@ -190,7 +190,9 @@ body{padding-bottom:112px}
   button.addEventListener("click", () => {
    const view = button.dataset.view;
    document.querySelectorAll(".finance-view").forEach(section => {
-    section.hidden = section.id !== "view-" + view && !(view === "overview" && section.id === "view-summary");
+    const sectionView = section.dataset.view || section.id.replace("view-", "");
+    const isVisible = sectionView === view || (view === "overview" && section.id === "view-summary");
+    section.hidden = !isVisible;
    });
    document.querySelectorAll(".finance-tab").forEach(tab => {
     const active = tab === button;
