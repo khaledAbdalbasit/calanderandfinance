@@ -68,7 +68,7 @@ ${c}س + ${d}ص = ${q2}
       seq=Array.from({length:5},(_,i)=>(start+i)**2);answer=(start+5)**2;
       title="مربعات متتابعة";hint="فكر في الجذر التربيعي لكل رقم.";solution=`الأرقام مربعات متتالية: ${start}²، ${start+1}²... لذلك التالي ${start+5}² = ${answer}.`;
     }
-    const question="ما الرقم التالي في النمط؟\\n"+seq.join("، ")+"، ؟";
+    const question="ما الرقم التالي في النمط؟\n"+seq.join("، ")+"، ؟";
     const id="gen-"+question;
     if(seenGenerated.has(id)) continue;
     seenGenerated.add(id);
