@@ -1,0 +1,121 @@
+import { supabase } from "./supabase.js";
+
+const puzzles = [
+{title:"لغز الميزان الثلاثي",category:"معادلات",level:"متوسط",question:"قطة + كلب = 15 كجم\nقطة + أرنب = 8 كجم\nكلب + أرنب = 11 كجم\n\nكم يزن الأرنب بمفرده؟",answers:["2","٢"],hint:"اجمع المعادلتين الثانية والثالثة، ثم اطرح مجموع القطة والكلب.",solution:"بجمع الثانية والثالثة: قطة + كلب + 2 أرنب = 19. وبما أن قطة + كلب = 15، إذن 2 أرنب = 4، والأرنب = 2 كجم."},
+{title:"لغز الصناديق والمفاتيح",category:"معادلات",level:"متوسط",question:"صندوق + مفتاح + قفل = 30\nصندوق + مفتاح = 22\nقفل + مفتاح = 16\n\nما قيمة الصندوق ناقص القفل؟",answers:["6","٦"],hint:"اطرح المعادلة الثانية من الأولى لتعرف قيمة القفل.",solution:"القفل = 30 - 22 = 8، والمفتاح = 8، والصندوق = 14. المطلوب 14 - 8 = 6."},
+{title:"لغز الحذف الذكي",category:"معادلات",level:"سهل",question:"2 تفاحة + برتقالة = 14\nتفاحة + 2 برتقالة = 16\n\nكم تساوي تفاحة + برتقالة؟",answers:["10","١٠"],hint:"اجمع المعادلتين؛ ستحصل على 3 تفاحات + 3 برتقالات.",solution:"بجمع المعادلتين: 3 تفاحات + 3 برتقالات = 30. بالقسمة على 3، تفاحة + برتقالة = 10."},
+{title:"لغز الأشكال",category:"معادلات",level:"صعب",question:"دائرة + مثلث + مربع = 24\nدائرة + دائرة + مثلث = 22\nمربع + مثلث + مثلث = 23\n\nما قيمة المربع؟",answers:["29/3","9.6667","9.67","٩٫٦٧"],hint:"سمّي الدائرة د، والمثلث م، والمربع س. ابدأ من المعادلة الثانية.",solution:"من الثانية: المثلث = 22 - 2 دائرة. ومن الثالثة: المربع = 23 - 2 مثلث. بالتعويض: الدائرة = 23/3، والمثلث = 20/3، والمربع = 29/3 ≈ 9.67. الأرقام المعطاة تؤدي إلى قيمة كسرية."},
+{title:"لغز أوزان المزرعة",category:"معادلات",level:"متوسط",question:"بقرة + حصان = 420 كجم\nحصان + خروف = 230 كجم\nبقرة + خروف = 310 كجم\n\nكم يزن الحصان؟",answers:["170","١٧٠"],hint:"اجمع أول معادلتين واطرح منهما المعادلة الثالثة.",solution:"2 حصان = 420 + 230 - 310 = 340، إذن الحصان = 170 كجم."},
+{title:"النمط المخفي",category:"أنماط",level:"سهل",question:"ما الرقم التالي؟\n2، 6، 12، 20، 30، ؟",answers:["42","٤٢"],hint:"احسب الفرق بين كل رقم واللي بعده.",solution:"الفروق 4، 6، 8، 10؛ الفرق التالي 12، إذن الرقم التالي 42."},
+{title:"ضاعف الرقم",category:"أنماط",level:"سهل",question:"ما الرقم الناقص؟\n3، 9، 27، 81، ؟",answers:["243","٢٤٣"],hint:"كل رقم بيتضرب في نفس العدد للوصول للي بعده.",solution:"كل مرة نضرب في 3: 81 × 3 = 243."},
+{title:"لغز الأعمار",category:"منطق",level:"متوسط",question:"عمر الأب 36 سنة وعمر ابنه 6 سنوات.\nبعد كام سنة يصبح عمر الأب ضعف عمر الابن؟",answers:["24","٢٤"],hint:"بعد س سنة: عمر الأب 36 + س، والابن 6 + س.",solution:"36 + س = 2 × (6 + س)، ومنها س = 24 سنة."},
+{title:"المفاتيح والمصباح",category:"منطق",level:"صعب",question:"أمامك 3 مفاتيح خارج غرفة مغلقة، وداخل الغرفة مصباح واحد. مفتاح واحد فقط يشغّل المصباح. مسموح تدخل الغرفة مرة واحدة فقط. كيف تعرف المفتاح الصحيح؟",answers:["الحرارة","شغل الاول ثم اطفيه وشغل الثاني","الأول والثاني"],hint:"المصباح لا يعطيك معلومة من الضوء فقط؛ فكر في أثر تشغيله لفترة.",solution:"شغّل المفتاح الأول عدة دقائق ثم أطفئه. شغّل الثاني وادخل: إن كان المصباح منيرًا فالثاني صحيح. إن كان مطفأ ودافئًا فالأول صحيح. إن كان مطفأ وباردًا فالثالث صحيح."},
+{title:"عبور النهر",category:"منطق",level:"صعب",question:"مزارع معه ذئب وماعز وكرنب، والقارب يحمل المزارع وشيئًا واحدًا فقط. لا يمكن ترك الذئب مع الماعز وحدهما، ولا الماعز مع الكرنب. ما الترتيب؟",answers:["الماعز الذئب الماعز الكرنب الماعز","الماعز ثم الذئب ثم الماعز ثم الكرنب"],hint:"ابدأ بالشيء الذي لا يمكن تركه مع أي من الاثنين الآخرين.",solution:"ينقل الماعز أولًا ويعود وحده. ينقل الذئب ثم يعيد الماعز. يترك الماعز وينقل الكرنب، ثم يعود وحده وينقل الماعز أخيرًا."},
+{title:"العملة الأثقل",category:"تفكير استراتيجي",level:"صعب",question:"معك 8 عملات متطابقة في الشكل، واحدة أثقل من الباقي. لديك ميزان ذو كفتين، ومسموح تستخدمه مرتين فقط. كيف تحدد العملة الأثقل؟",answers:["3 ضد 3 ثم 1 ضد 1","3 3 2","اقسمهم 3 و3 و2"],hint:"قسّم العملات إلى 3 مجموعات: 3 و3 و2.",solution:"زن 3 مقابل 3. إن رجحت كفة، زن عملتين من الثلاثة الأثقل مقابل بعضهما؛ إن تساوتا فالثالثة هي الأثقل. إن تساوت الكفتان أولًا، زن العملتين المتبقيتين واحدة مقابل الأخرى."},
+{title:"لغز الرقمين",category:"تفكير استراتيجي",level:"متوسط",question:"رقمان مجموعهما 20، والفرق بينهما 6. ما حاصل ضربهما؟",answers:["91","٩١"],hint:"الرقمان مجموعهما 20 والفرق بينهما 6.",solution:"الرقمان 13 و7؛ حاصل الضرب 13 × 7 = 91."}
+];
+
+const $ = id => document.getElementById(id);
+const storageKey = "personalSpaceGames:v1";
+let currentIndex = 0;
+let attempts = 0;
+let solved = new Set();
+let hintLevel = 0;
+let revealed = false;
+let stats = {solved:[],attempts:0};
+try { stats = {...stats,...JSON.parse(localStorage.getItem(storageKey)||"{}")}; solved = new Set(stats.solved||[]); } catch {}
+
+function normalize(value) {
+  return String(value||"").trim().toLowerCase()
+    .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[٫،]/g,".").replace(/\s+/g,"")
+    .replace(/[كجمسنة]/g,"").replace(/[أإآ]/g,"ا");
+}
+function saveStats() {
+  stats.solved=[...solved];
+  localStorage.setItem(storageKey,JSON.stringify(stats));
+  $("solvedCount").textContent=solved.size;
+  $("successRate").textContent=stats.attempts?Math.round(solved.size/stats.attempts*100)+"%":"0%";
+}
+function renderList() {
+  $("puzzleList").replaceChildren();
+  puzzles.forEach((p,i)=>{
+    const button=document.createElement("button");
+    button.type="button";
+    button.className="puzzle-choice"+(i===currentIndex?" active":"");
+    const title=document.createElement("strong");
+    title.textContent=(solved.has(i)?"✓ ":"")+(i+1)+". "+p.title;
+    const meta=document.createElement("span");
+    meta.textContent=p.category+" · "+p.level;
+    button.append(title,meta);
+    button.addEventListener("click",()=>selectPuzzle(i));
+    $("puzzleList").append(button);
+  });
+}
+function renderPuzzle() {
+  const p=puzzles[currentIndex];
+  attempts=0;hintLevel=0;revealed=solved.has(currentIndex);
+  $("puzzleNumber").textContent="لغز "+(currentIndex+1)+" من "+puzzles.length;
+  $("difficulty").textContent=p.level;
+  $("puzzleTitle").textContent=p.title;
+  $("category").textContent=p.category;
+  $("question").textContent=p.question;
+  $("attempts").textContent="";
+  $("answerInput").value="";
+  $("answerInput").disabled=revealed;
+  $("feedback").className="feedback";
+  $("feedback").textContent=revealed?"أنت حليت اللغز ده قبل كده. تقدر تراجع الحل.":"خد وقتك وفكر قبل ما تجاوب.";
+  $("hint").hidden=true;$("hint").textContent="";
+  $("explanation").hidden=!revealed;
+  $("explanation").textContent=revealed?"الحل: "+p.solution:"";
+  $("solutionButton").disabled=revealed;$("hintButton").disabled=revealed;
+  $("nextButton").disabled=currentIndex===puzzles.length-1;
+  renderList();
+}
+function selectPuzzle(i){currentIndex=i;renderPuzzle();}
+function isCorrect(value) {
+  const v=normalize(value);
+  const answers=puzzles[currentIndex].answers.map(normalize);
+  if(answers.includes(v)) return true;
+  if(currentIndex===3 && Math.abs(Number(v)-29/3)<0.02) return true;
+  if(currentIndex===8 && v.includes("اول")&&v.includes("اطفي")&&v.includes("ثاني")) return true;
+  if(currentIndex===9 && v.includes("ماعز")&&v.includes("ذئب")&&v.includes("كرنب")) return true;
+  if(currentIndex===10 && v.includes("3")&&v.includes("1")) return true;
+  return false;
+}
+$("answerForm").addEventListener("submit",e=>{
+  e.preventDefault();if(revealed)return;
+  attempts++;stats.attempts++;
+  $("attempts").textContent="محاولاتك: "+attempts;
+  if(isCorrect($("answerInput").value)){
+    solved.add(currentIndex);revealed=true;$("answerInput").disabled=true;
+    $("feedback").className="feedback good";
+    $("feedback").textContent="إجابة صحيحة! ممتاز، كمل بنفس التفكير.";
+    $("explanation").hidden=false;$("explanation").textContent="الحل: "+puzzles[currentIndex].solution;
+    $("solutionButton").disabled=true;$("hintButton").disabled=true;
+  } else {
+    $("feedback").className="feedback bad";
+    $("feedback").textContent="مش دي الإجابة. راجع المعطيات وجرب مرة تانية.";
+  }
+  saveStats();renderList();
+});
+$("hintButton").addEventListener("click",()=>{
+  if(revealed)return;
+  hintLevel=Math.min(hintLevel+1,2);$("hint").hidden=false;
+  $("hint").textContent=hintLevel===1?"تلميح: "+puzzles[currentIndex].hint:"تلميح إضافي: حوّل المعطيات لخطوات صغيرة وابدأ بعلاقة واحدة واضحة.";
+});
+$("solutionButton").addEventListener("click",()=>{
+  $("explanation").hidden=false;$("explanation").textContent="الحل: "+puzzles[currentIndex].solution;
+  $("feedback").className="feedback bad";$("feedback").textContent="عرضت الحل. جرّب اللغز التالي بنفسك.";
+  $("answerInput").disabled=true;revealed=true;$("hintButton").disabled=true;$("solutionButton").disabled=true;
+});
+$("nextButton").addEventListener("click",()=>{if(currentIndex<puzzles.length-1)selectPuzzle(currentIndex+1);});
+$("signOut").addEventListener("click",async()=>{
+  $("signOut").disabled=true;
+  const {error}=await supabase.auth.signOut();
+  if(error){$("signOut").disabled=false;$("feedback").textContent="تعذر تسجيل الخروج. حاول مرة أخرى.";return;}
+  window.location.replace("/");
+});
+const {data,error}=await supabase.auth.getSession();
+if(error||!data.session){window.location.replace("/");}
+else{$("totalCount").textContent=puzzles.length;saveStats();renderPuzzle();}
