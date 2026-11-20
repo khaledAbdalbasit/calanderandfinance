@@ -22,7 +22,7 @@ puzzles.push(...mysteryPuzzles);
 
 puzzles.forEach((p,i)=>{
   p.id=p.id||"fixed-"+i;
-  p.visualType=i===0?"balance":i<=4?"equation":i<=6?"sequence":"logic";
+  p.visualType=p.visualType||(i===0?"balance":i<=4?"equation":i<=6?"sequence":"logic");
 });
 
 const $ = id => document.getElementById(id);
