@@ -15,17 +15,76 @@ const puzzles = [
 {title:"لغز الرقمين",category:"تفكير استراتيجي",level:"متوسط",question:"رقمان مجموعهما 20، والفرق بينهما 6. ما حاصل ضربهما؟",answers:["91","٩١"],hint:"الرقمان مجموعهما 20 والفرق بينهما 6.",solution:"الرقمان 13 و7؛ حاصل الضرب 13 × 7 = 91."}
 ];
 
+puzzles.forEach((p,i)=>{p.id=p.id||"fixed-"+i;});
+
 const $ = id => document.getElementById(id);
-const storageKey = "personalSpaceGames:v1";
+const storageKey = "personalSpaceGames:v2";\nconst seenKey = "personalSpaceGames:generated:v1";\nlet seenGenerated = new Set();
 let currentIndex = 0;
 let attempts = 0;
 let solved = new Set();
 let hintLevel = 0;
 let revealed = false;
 let stats = {solved:[],attempts:0};
-try { stats = {...stats,...JSON.parse(localStorage.getItem(storageKey)||"{}")}; solved = new Set(stats.solved||[]); } catch {}
+try {
+  stats = {...stats,...JSON.parse(localStorage.getItem(storageKey)||"{}")};
+  solved = new Set((stats.solved||[]).map(id=>typeof id==="number"?"fixed-"+id:id));
+  seenGenerated = new Set(JSON.parse(localStorage.getItem(seenKey)||"[]"));
+} catch {}
 
-function normalize(value) {
+
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function makeGeneratedPuzzle(){
+  for(let tries=0;tries<100;tries++){
+    if(Math.random()<0.68){
+      const x=rand(2,24),y=rand(2,24);
+      let a=rand(1,6),b=rand(1,6),c=rand(1,6),d=rand(1,6);
+      if(a*d-b*c===0) continue;
+      const q1=a*x+b*y,q2=c*x+d*y;
+      const question=`إذا كان:
+${a}س + ${b}ص = ${q1}
+${c}س + ${d}ص = ${q2}
+
+فما قيمة س؟`;
+      const id="gen-"+question;
+      if(seenGenerated.has(id)) continue;
+      seenGenerated.add(id);
+      return {id,generated:true,title:"معادلتان ومجهولان",category:"معادلات",level:x>16||y>16?"صعب":"متوسط",question,answers:[String(x)],numericAnswer:x,hint:"استخدم الحذف أو التعويض للتخلص من أحد المجهولين.",solution:`بحل المعادلتين معًا نجد س = ${x}، وص = ${y}. بالتعويض: ${a}×${x} + ${b}×${y} = ${q1}، والمعادلة الثانية صحيحة أيضًا.`};
+    }
+    const type=rand(0,2);
+    let seq=[],answer,title,hint,solution;
+    if(type===0){
+      const start=rand(1,25),step=rand(2,12);
+      seq=Array.from({length:5},(_,i)=>start+i*step);answer=start+5*step;
+      title="اكتشف النمط الحسابي";hint="راقب مقدار الزيادة بين كل رقم والذي يليه.";solution=`الفرق ثابت ويساوي ${step}، إذن الرقم التالي ${answer}.`;
+    }else if(type===1){
+      const start=rand(2,8),factor=rand(2,4);
+      seq=Array.from({length:5},(_,i)=>start*factor**i);answer=start*factor**5;
+      title="تحدي التضاعف";hint="ابحث عن العدد الذي نضرب فيه كل مرة.";solution=`كل رقم يُضرب في ${factor}، إذن ${seq[4]} × ${factor} = ${answer}.`;
+    }else{
+      const start=rand(1,8);
+      seq=Array.from({length:5},(_,i)=>(start+i)**2);answer=(start+5)**2;
+      title="مربعات متتابعة";hint="فكر في الجذر التربيعي لكل رقم.";solution=`الأرقام مربعات متتالية: ${start}²، ${start+1}²... لذلك التالي ${start+5}² = ${answer}.`;
+    }
+    const question="ما الرقم التالي في النمط؟\\n"+seq.join("، ")+"، ؟";
+    const id="gen-"+question;
+    if(seenGenerated.has(id)) continue;
+    seenGenerated.add(id);
+    return {id,generated:true,title,category:"أنماط",level:"سهل",question,answers:[String(answer)],numericAnswer:answer,hint,solution};
+  }
+  return null;
+}
+function addGeneratedPuzzle(){
+  const puzzle=makeGeneratedPuzzle();
+  if(!puzzle){
+    $("feedback").textContent="وصلنا لمجموعة كبيرة من الأنماط. حاول مرة أخرى لتوليد لغز مختلف.";
+    return;
+  }
+  puzzles.push(puzzle);
+  try{localStorage.setItem(seenKey,JSON.stringify([...seenGenerated].slice(-5000)));}catch{}
+  $("totalCount").textContent="∞";
+  selectPuzzle(puzzles.length-1);
+}
+\nfunction normalize(value) {
   return String(value||"").trim().toLowerCase()
     .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
     .replace(/[٫،]/g,".").replace(/\s+/g,"")
@@ -44,7 +103,7 @@ function renderList() {
     button.type="button";
     button.className="puzzle-choice"+(i===currentIndex?" active":"");
     const title=document.createElement("strong");
-    title.textContent=(solved.has(i)?"✓ ":"")+(i+1)+". "+p.title;
+    title.textContent=(solved.has(p.id)?"✓ ":"")+(i+1)+". "+p.title;
     const meta=document.createElement("span");
     meta.textContent=p.category+" · "+p.level;
     button.append(title,meta);
@@ -69,7 +128,7 @@ function renderPuzzle() {
   $("explanation").hidden=!revealed;
   $("explanation").textContent=revealed?"الحل: "+p.solution:"";
   $("solutionButton").disabled=revealed;$("hintButton").disabled=revealed;
-  $("nextButton").disabled=currentIndex===puzzles.length-1;
+  $("nextButton").disabled=false;
   renderList();
 }
 function selectPuzzle(i){currentIndex=i;renderPuzzle();}
@@ -77,7 +136,7 @@ function isCorrect(value) {
   const v=normalize(value);
   const answers=puzzles[currentIndex].answers.map(normalize);
   if(answers.includes(v)) return true;
-  if(currentIndex===3 && Math.abs(Number(v)-29/3)<0.02) return true;
+  if(puzzles[currentIndex].numericAnswer!==undefined && Math.abs(Number(v)-puzzles[currentIndex].numericAnswer)<0.0001) return true;\n  if(currentIndex===3 && Math.abs(Number(v)-29/3)<0.02) return true;
   if(currentIndex===8 && v.includes("اول")&&v.includes("اطفي")&&v.includes("ثاني")) return true;
   if(currentIndex===9 && v.includes("ماعز")&&v.includes("ذئب")&&v.includes("كرنب")) return true;
   if(currentIndex===10 && v.includes("3")&&v.includes("1")) return true;
@@ -88,7 +147,7 @@ $("answerForm").addEventListener("submit",e=>{
   attempts++;stats.attempts++;
   $("attempts").textContent="محاولاتك: "+attempts;
   if(isCorrect($("answerInput").value)){
-    solved.add(currentIndex);revealed=true;$("answerInput").disabled=true;
+    solved.add(puzzles[currentIndex].id);revealed=true;$("answerInput").disabled=true;
     $("feedback").className="feedback good";
     $("feedback").textContent="إجابة صحيحة! ممتاز، كمل بنفس التفكير.";
     $("explanation").hidden=false;$("explanation").textContent="الحل: "+puzzles[currentIndex].solution;
@@ -109,7 +168,7 @@ $("solutionButton").addEventListener("click",()=>{
   $("feedback").className="feedback bad";$("feedback").textContent="عرضت الحل. جرّب اللغز التالي بنفسك.";
   $("answerInput").disabled=true;revealed=true;$("hintButton").disabled=true;$("solutionButton").disabled=true;
 });
-$("nextButton").addEventListener("click",()=>{if(currentIndex<puzzles.length-1)selectPuzzle(currentIndex+1);});
+$("nextButton").addEventListener("click",()=>{if(currentIndex<puzzles.length-1)selectPuzzle(currentIndex+1);else addGeneratedPuzzle();});
 $("signOut").addEventListener("click",async()=>{
   $("signOut").disabled=true;
   const {error}=await supabase.auth.signOut();
@@ -118,4 +177,4 @@ $("signOut").addEventListener("click",async()=>{
 });
 const {data,error}=await supabase.auth.getSession();
 if(error||!data.session){window.location.replace("/");}
-else{$("totalCount").textContent=puzzles.length;saveStats();renderPuzzle();}
+else{$("totalCount").textContent="∞";saveStats();renderPuzzle();}
