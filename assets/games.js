@@ -15,7 +15,10 @@ const puzzles = [
 {title:"لغز الرقمين",category:"تفكير استراتيجي",level:"متوسط",question:"رقمان مجموعهما 20، والفرق بينهما 6. ما حاصل ضربهما؟",answers:["91","٩١"],hint:"الرقمان مجموعهما 20 والفرق بينهما 6.",solution:"الرقمان 13 و7؛ حاصل الضرب 13 × 7 = 91."}
 ];
 
-puzzles.forEach((p,i)=>{p.id=p.id||"fixed-"+i;});
+puzzles.forEach((p,i)=>{
+  p.id=p.id||"fixed-"+i;
+  p.visualType=i===0?"balance":i<=4?"equation":i<=6?"sequence":"logic";
+});
 
 const $ = id => document.getElementById(id);
 const storageKey = "personalSpaceGames:v2";
@@ -51,7 +54,7 @@ ${c}س + ${d}ص = ${q2}
       const id="gen-"+question;
       if(seenGenerated.has(id)) continue;
       seenGenerated.add(id);
-      return {id,generated:true,title:"معادلتان ومجهولان",category:"معادلات",level:x>16||y>16?"صعب":"متوسط",question,answers:[String(x)],numericAnswer:x,hint:"استخدم الحذف أو التعويض للتخلص من أحد المجهولين.",solution:`بحل المعادلتين معًا نجد س = ${x}، وص = ${y}. بالتعويض: ${a}×${x} + ${b}×${y} = ${q1}، والمعادلة الثانية صحيحة أيضًا.`};
+      return {id,generated:true,visualType:"equation",title:"معادلتان ومجهولان",category:"معادلات",level:x>16||y>16?"صعب":"متوسط",question,answers:[String(x)],numericAnswer:x,hint:"استخدم الحذف أو التعويض للتخلص من أحد المجهولين.",solution:`بحل المعادلتين معًا نجد س = ${x}، وص = ${y}. بالتعويض: ${a}×${x} + ${b}×${y} = ${q1}، والمعادلة الثانية صحيحة أيضًا.`};
     }
     const type=rand(0,2);
     let seq=[],answer,title,hint,solution;
@@ -72,7 +75,7 @@ ${c}س + ${d}ص = ${q2}
     const id="gen-"+question;
     if(seenGenerated.has(id)) continue;
     seenGenerated.add(id);
-    return {id,generated:true,title,category:"أنماط",level:"سهل",question,answers:[String(answer)],numericAnswer:answer,hint,solution};
+    return {id,generated:true,visualType:"sequence",title,category:"أنماط",level:"سهل",question,answers:[String(answer)],numericAnswer:answer,hint,solution};
   }
   return null;
 }
@@ -97,7 +100,7 @@ function saveStats() {
   stats.solved=[...solved];
   localStorage.setItem(storageKey,JSON.stringify(stats));
   $("solvedCount").textContent=solved.size;
-  $("successRate").textContent=stats.attempts?Math.round(solved.size/stats.attempts*100)+"%":"0%";
+  $("successRate").textContent=stats.attempts?Math.round(solved.size/stats.attempts*100)+"%":"0%";\n  $("xpCount").textContent=solved.size*25;
 }
 function renderList() {
   $("puzzleList").replaceChildren();
@@ -116,14 +119,104 @@ function renderList() {
     $("puzzleList").append(button);
   });
 }
-function renderPuzzle() {
+
+function node(tag,className,text){
+  const el=document.createElement(tag);
+  if(className)el.className=className;
+  if(text!==undefined)el.textContent=text;
+  return el;
+}
+function renderVisualStage(p){
+  const stage=$("visualStage");
+  stage.replaceChildren();
+  const heading=node("div","visual-heading");
+  heading.append(node("strong","",p.visualType==="balance"?"جرّب تكتشف العلاقة":p.visualType==="sequence"?"كمّل النمط بنفسك":p.visualType==="equation"?"لوحة المعادلات":"فكّر في الخطوات"));
+  heading.append(node("span","",p.visualType==="balance"?"تفاعل بصري":p.visualType==="sequence"?"تحدي الأرقام":"عرض تفاعلي"));
+  stage.append(heading);
+  if(p.visualType==="balance"){
+    const wrap=node("div","visual-balance");
+    const animals=node("div","visual-animal-row");
+    const equations=node("div","visual-equations");
+    const items=[["🐱","قطة"],["🐶","كلب"],["🐰","أرنب"]];
+    items.forEach(([emoji,name])=>{
+      const chip=node("div","animal-chip");
+      const btn=node("button","",emoji);
+      btn.type="button";btn.setAttribute("aria-label","حدد "+name);
+      btn.addEventListener("click",()=>{
+        animals.querySelectorAll(".animal-chip").forEach(x=>x.classList.remove("active"));
+        chip.classList.add("active");
+        equations.querySelectorAll(".visual-equation").forEach(row=>row.classList.toggle("selected",row.dataset.items.includes(name)));
+      });
+      chip.append(btn,node("small","",name));animals.append(chip);
+    });
+    const beam=node("div","balance-beam");
+    const base=node("div","balance-base");
+    wrap.append(animals,beam,base);
+    const lines=p.question.split("\\n").filter(line=>line.includes("="));
+    lines.forEach(line=>{
+      const row=node("div","visual-equation",line);
+      row.dataset.items=["قطة","كلب","أرنب"].filter(name=>line.includes(name)).join("|");
+      row.addEventListener("click",()=>{
+        equations.querySelectorAll(".visual-equation").forEach(x=>x.classList.remove("selected"));
+        row.classList.add("selected");
+      });
+      equations.append(row);
+    });
+    wrap.append(equations,node("div","visual-note","اضغط على حيوان أو معادلة لمتابعة العلاقات بينها"));
+    stage.append(wrap);return;
+  }
+  if(p.visualType==="sequence"){
+    const numbers=(p.question.match(/-?\\d+(?:\\.\\d+)?/g)||[]).slice(0,7);
+    const grid=node("div","visual-grid");
+    numbers.forEach((number,i)=>grid.append(node("div","visual-tile",number)));
+    grid.append(node("div","visual-tile missing","?"));
+    stage.append(grid,node("div","visual-note","راقب الفرق أو طريقة الضرب بين الأرقام، ثم أدخل الرقم الناقص"));
+    return;
+  }
+  if(p.visualType==="equation"){
+    const equations=node("div","visual-equations");
+    const lines=p.question.split("\\n").filter(line=>line.includes("="));
+    lines.forEach(line=>{
+      const row=node("div","visual-equation");
+      const parts=line.split("=");
+      row.append(node("span","",parts[0].trim()+"  =  "),node("strong","",parts.slice(1).join("=").trim()));
+      equations.append(row);
+    });
+    const symbols=node("div","visual-grid");
+    [["➕","اجمع الحدود"],["➖","احذف حدًا متشابهًا"],["🧩","اعزل المجهول"]].forEach(([icon,label])=>{
+      const tile=node("div","visual-tile");
+      tile.append(node("strong","",icon),node("small","",label));symbols.append(tile);
+    });
+    stage.append(equations,symbols);return;
+  }
+  const logic=node("div","visual-grid");
+  [["🧠","حلّل المعطيات"],["🔍","ابحث عن الدليل"],["🎯","اختبر الحل"]].forEach(([icon,label])=>{
+    const tile=node("div","visual-tile");tile.append(node("strong","",icon),node("small","",label));logic.append(tile);
+  });
+  stage.append(logic,node("div","visual-note","قسّم اللغز إلى خطوات صغيرة قبل اختيار إجابتك"));
+}
+function celebrate(){
+  const card=document.querySelector(".game-card");
+  card.classList.remove("success");void card.offsetWidth;card.classList.add("success");
+  const feedback=$("feedback");feedback.classList.remove("good");void feedback.offsetWidth;feedback.classList.add("good");
+  const colors=["#73a7ff","#54d6a0","#f4c76b","#ff8e8e"];
+  for(let i=0;i<18;i++){
+    const bit=node("span","confetti",["✦","●","◆"][i%3]);
+    bit.style.left=(5+Math.random()*90)+"%";
+    bit.style.top=(12+Math.random()*35)+"%";
+    bit.style.color=colors[i%colors.length];
+    card.append(bit);
+    setTimeout(()=>bit.remove(),1100);
+  }
+}
+\nfunction renderPuzzle() {
   const p=puzzles[currentIndex];
   attempts=0;hintLevel=0;revealed=solved.has(p.id);
   $("puzzleNumber").textContent="لغز "+(currentIndex+1)+(p.generated?" · مولّد تلقائيًا":" · من المجموعة الأساسية");
   $("difficulty").textContent=p.level;
   $("puzzleTitle").textContent=p.title;
   $("category").textContent=p.category;
-  $("question").textContent=p.question;
+  $("question").textContent=p.question;\n  renderVisualStage(p);\n  $("progressFill").style.width=((solved.size%5)/5*100)+"%";\n  $("xpCount").textContent=solved.size*25;\n  document.querySelector(".game-card").classList.remove("success");
   $("attempts").textContent="";
   $("answerInput").value="";
   $("answerInput").disabled=revealed;
@@ -155,7 +248,7 @@ $("answerForm").addEventListener("submit",e=>{
   if(isCorrect($("answerInput").value)){
     solved.add(puzzles[currentIndex].id);revealed=true;$("answerInput").disabled=true;
     $("feedback").className="feedback good";
-    $("feedback").textContent="إجابة صحيحة! ممتاز، كمل بنفس التفكير.";
+    $("feedback").textContent="إجابة صحيحة! ممتاز، كسبت 25 نقطة خبرة ⭐";\n    celebrate();
     $("explanation").hidden=false;$("explanation").textContent="الحل: "+puzzles[currentIndex].solution;
     $("solutionButton").disabled=true;$("hintButton").disabled=true;
   } else {
