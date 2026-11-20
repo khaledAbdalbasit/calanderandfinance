@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07101f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/app-icon.svg" type="image/svg+xml">
+<title>مساحة التفكير والألعاب</title>
+<style>
+:root{--bg:#07101f;--panel:#14243a;--line:rgba(154,190,236,.18);--text:#eef4ff;--muted:#9aabc4;--blue:#73a7ff;--green:#54d6a0;--yellow:#f4c76b;--red:#ff8e8e}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 12% 8%,rgba(61,111,190,.24),transparent 38%),radial-gradient(ellipse at 88% 75%,rgba(65,191,163,.13),transparent 34%),linear-gradient(145deg,#07101f,#0c1930 55%,#101b30);color:var(--text);font-family:Tahoma,Arial,sans-serif;line-height:1.8}
+.wrap{width:min(980px,100%);margin:auto;padding:22px 16px 50px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.top h1{font-size:clamp(26px,5vw,36px);margin:0}.muted,small{color:var(--muted)}a{color:#a9caff;text-decoration:none}
+button,input,select{font:inherit;color:var(--text)}button{border:1px solid var(--line);background:#1f314c;padding:10px 15px;border-radius:12px;cursor:pointer;min-height:44px}button:disabled{opacity:.5;cursor:not-allowed}button.primary{background:linear-gradient(135deg,#356bb1,#28528b)}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.actions,.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}.panel,.stat{background:linear-gradient(145deg,rgba(25,40,64,.84),rgba(14,25,43,.78));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 18px 55px #0002}.stat small{display:block}.stat strong{font-size:25px}.game-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(220px,.7fr);gap:14px;align-items:start}.game-card{min-height:390px}.eyebrow{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:13px}.game-card h2{margin:12px 0;font-size:24px}.question{white-space:pre-line;font-size:17px;line-height:2;padding:16px;border-radius:14px;background:rgba(7,17,32,.55);border:1px solid var(--line);margin:14px 0}.answer-row{display:flex;gap:8px;margin-top:14px}.answer-row input{flex:1;min-width:0;background:#091526;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:17px}.feedback{margin-top:12px;padding:12px;border-radius:12px;min-height:48px}.feedback.good{color:var(--green);background:rgba(84,214,160,.1);border:1px solid rgba(84,214,160,.25)}.feedback.bad{color:var(--yellow);background:rgba(244,199,107,.1);border:1px solid rgba(244,199,107,.25)}.hint{margin-top:12px;color:#c8d9f4;padding:12px;border-right:3px solid var(--blue);background:rgba(115,167,255,.08);border-radius:8px}.side h3{margin:0 0 10px}.puzzle-list{display:grid;gap:7px;max-height:440px;overflow:auto}.puzzle-choice{text-align:right;width:100%;background:rgba(9,21,38,.48);font-size:13px}.puzzle-choice.active{border-color:var(--blue);background:rgba(67,119,190,.25)}.puzzle-choice span{display:block;color:var(--muted);font-size:11px}.tag{display:inline-block;padding:3px 9px;border-radius:30px;background:rgba(115,167,255,.12);color:#c8dcff;font-size:12px}.explanation{margin-top:14px;padding:14px;background:rgba(84,214,160,.07);border:1px solid rgba(84,214,160,.2);border-radius:12px}.explanation[hidden]{display:none}.footer{margin-top:28px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:720px){.game-layout{grid-template-columns:1fr}.stats{gap:8px}.stat{padding:12px}.stat strong{font-size:20px}.side{order:2}.puzzle-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:none}.game-card{min-height:0}.answer-row{flex-direction:column}.wrap{padding:16px 12px 36px}}
+@media(max-width:380px){.puzzle-list{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="top"><div><h1>مساحة التفكير 🧠</h1><p class="muted">ألغاز منطق وحساب وأنماط — فكّر براحتك واختبر طريقة تفكيرك.</p></div><div class="actions"><a href="/dashboard">الرئيسية</a><button id="signOut">تسجيل الخروج</button></div></header>
+<section class="stats">
+<div class="stat"><small>حلول صحيحة</small><strong id="solvedCount">0</strong></div>
+<div class="stat"><small>نسبة النجاح</small><strong id="successRate">0%</strong></div>
+<div class="stat"><small>الألغاز المتاحة</small><strong id="totalCount">12</strong></div>
+</section>
+<div class="game-layout">
+<section class="panel game-card">
+<div class="eyebrow"><span id="puzzleNumber">لغز 1</span><span class="tag" id="difficulty">متوسط</span></div>
+<h2 id="puzzleTitle"></h2>
+<div class="eyebrow"><span id="category"></span><span id="attempts"></span></div>
+<div class="question" id="question"></div>
+<form id="answerForm">
+<div class="answer-row"><input id="answerInput" autocomplete="off" placeholder="اكتب إجابتك هنا..." required><button class="primary" type="submit">تحقق من الإجابة</button></div>
+</form>
+<div class="feedback" id="feedback" role="status" aria-live="polite">خد وقتك وفكر قبل ما تجاوب.</div>
+<div class="controls"><button id="hintButton" type="button">اظهر تلميح</button><button id="solutionButton" type="button">عرض الحل</button><button id="nextButton" type="button" class="primary">اللغز التالي ←</button></div>
+<div class="hint" id="hint" hidden></div>
+<div class="explanation" id="explanation" hidden></div>
+</section>
+<aside class="panel side"><h3>قائمة الألغاز</h3><p class="muted" style="font-size:13px;margin-top:0">اختار أي لغز وابدأ التحدي.</p><div class="puzzle-list" id="puzzleList"></div></aside>
+</div>
+<p class="footer">نتيجتك محفوظة على نفس الجهاز والمتصفح. · © 2026 Khaled Abdelbasit. All rights reserved.</p>
+</main>
+<script type="module" src="/assets/games.js"></script>
+<script type="module" src="/assets/pwa.js"></script>
+</body>
+</html>
