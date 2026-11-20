@@ -100,7 +100,8 @@ function saveStats() {
   stats.solved=[...solved];
   localStorage.setItem(storageKey,JSON.stringify(stats));
   $("solvedCount").textContent=solved.size;
-  $("successRate").textContent=stats.attempts?Math.round(solved.size/stats.attempts*100)+"%":"0%";\n  $("xpCount").textContent=solved.size*25;
+  $("successRate").textContent=stats.attempts?Math.round(solved.size/stats.attempts*100)+"%":"0%";
+  $("xpCount").textContent=solved.size*25;
 }
 function renderList() {
   $("puzzleList").replaceChildren();
@@ -209,14 +210,19 @@ function celebrate(){
     setTimeout(()=>bit.remove(),1100);
   }
 }
-\nfunction renderPuzzle() {
+
+function renderPuzzle() {
   const p=puzzles[currentIndex];
   attempts=0;hintLevel=0;revealed=solved.has(p.id);
   $("puzzleNumber").textContent="لغز "+(currentIndex+1)+(p.generated?" · مولّد تلقائيًا":" · من المجموعة الأساسية");
   $("difficulty").textContent=p.level;
   $("puzzleTitle").textContent=p.title;
   $("category").textContent=p.category;
-  $("question").textContent=p.question;\n  renderVisualStage(p);\n  $("progressFill").style.width=((solved.size%5)/5*100)+"%";\n  $("xpCount").textContent=solved.size*25;\n  document.querySelector(".game-card").classList.remove("success");
+  $("question").textContent=p.question;
+  renderVisualStage(p);
+  $("progressFill").style.width=((solved.size%5)/5*100)+"%";
+  $("xpCount").textContent=solved.size*25;
+  document.querySelector(".game-card").classList.remove("success");
   $("attempts").textContent="";
   $("answerInput").value="";
   $("answerInput").disabled=revealed;
@@ -248,7 +254,8 @@ $("answerForm").addEventListener("submit",e=>{
   if(isCorrect($("answerInput").value)){
     solved.add(puzzles[currentIndex].id);revealed=true;$("answerInput").disabled=true;
     $("feedback").className="feedback good";
-    $("feedback").textContent="إجابة صحيحة! ممتاز، كسبت 25 نقطة خبرة ⭐";\n    celebrate();
+    $("feedback").textContent="إجابة صحيحة! ممتاز، كسبت 25 نقطة خبرة ⭐";
+    celebrate();
     $("explanation").hidden=false;$("explanation").textContent="الحل: "+puzzles[currentIndex].solution;
     $("solutionButton").disabled=true;$("hintButton").disabled=true;
   } else {
