@@ -29,7 +29,7 @@ function normalize(value) {
   return String(value||"").trim().toLowerCase()
     .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
     .replace(/[٫،]/g,".").replace(/\s+/g,"")
-    .replace(/[كجمسنة]/g,"").replace(/[أإآ]/g,"ا");
+    .replace(/كجم|سنة/g,"").replace(/[أإآ]/g,"ا");
 }
 function saveStats() {
   stats.solved=[...solved];
