@@ -18,7 +18,9 @@ const puzzles = [
 puzzles.forEach((p,i)=>{p.id=p.id||"fixed-"+i;});
 
 const $ = id => document.getElementById(id);
-const storageKey = "personalSpaceGames:v2";\nconst seenKey = "personalSpaceGames:generated:v1";\nlet seenGenerated = new Set();
+const storageKey = "personalSpaceGames:v2";
+const seenKey = "personalSpaceGames:generated:v1";
+let seenGenerated = new Set();
 let currentIndex = 0;
 let attempts = 0;
 let solved = new Set();
@@ -98,7 +100,9 @@ function saveStats() {
 }
 function renderList() {
   $("puzzleList").replaceChildren();
-  puzzles.forEach((p,i)=>{
+  const start=Math.max(0,puzzles.length-24);
+  puzzles.slice(start).forEach((p,offset)=>{
+    const i=start+offset;
     const button=document.createElement("button");
     button.type="button";
     button.className="puzzle-choice"+(i===currentIndex?" active":"");
@@ -113,8 +117,8 @@ function renderList() {
 }
 function renderPuzzle() {
   const p=puzzles[currentIndex];
-  attempts=0;hintLevel=0;revealed=solved.has(currentIndex);
-  $("puzzleNumber").textContent="لغز "+(currentIndex+1)+" من "+puzzles.length;
+  attempts=0;hintLevel=0;revealed=solved.has(p.id);
+  $("puzzleNumber").textContent="لغز "+(currentIndex+1)+(p.generated?" · مولّد تلقائيًا":" · من المجموعة الأساسية");
   $("difficulty").textContent=p.level;
   $("puzzleTitle").textContent=p.title;
   $("category").textContent=p.category;
@@ -136,7 +140,8 @@ function isCorrect(value) {
   const v=normalize(value);
   const answers=puzzles[currentIndex].answers.map(normalize);
   if(answers.includes(v)) return true;
-  if(puzzles[currentIndex].numericAnswer!==undefined && Math.abs(Number(v)-puzzles[currentIndex].numericAnswer)<0.0001) return true;\n  if(currentIndex===3 && Math.abs(Number(v)-29/3)<0.02) return true;
+  if(puzzles[currentIndex].numericAnswer!==undefined && Math.abs(Number(v)-puzzles[currentIndex].numericAnswer)<0.0001) return true;
+  if(currentIndex===3 && Math.abs(Number(v)-29/3)<0.02) return true;
   if(currentIndex===8 && v.includes("اول")&&v.includes("اطفي")&&v.includes("ثاني")) return true;
   if(currentIndex===9 && v.includes("ماعز")&&v.includes("ذئب")&&v.includes("كرنب")) return true;
   if(currentIndex===10 && v.includes("3")&&v.includes("1")) return true;
