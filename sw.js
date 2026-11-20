@@ -1,4 +1,4 @@
-const CACHE_NAME = "personal-dashboard-v10";
+const CACHE_NAME = "personal-dashboard-v11";
 const CACHE_PREFIX = "personal-dashboard-";
 const APP_SHELL = [
   "/",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "/finance",
   "/learning-plan",
   "/games",
-  "/assets/games.js",
+  "/assets/games.js",\n  "/assets/categories-game.js",
   "/manifest.webmanifest",
   "/assets/pwa.js",
   "/assets/offline-store.js",
