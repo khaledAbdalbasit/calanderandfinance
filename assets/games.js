@@ -28,7 +28,8 @@ let hintLevel = 0;
 let revealed = false;
 let stats = {solved:[],attempts:0};
 try {
-  stats = {...stats,...JSON.parse(localStorage.getItem(storageKey)||"{}")};
+  const saved=JSON.parse(localStorage.getItem(storageKey)||localStorage.getItem("personalSpaceGames:v1")||"{}");
+  stats = {...stats,...saved};
   solved = new Set((stats.solved||[]).map(id=>typeof id==="number"?"fixed-"+id:id));
   seenGenerated = new Set(JSON.parse(localStorage.getItem(seenKey)||"[]"));
 } catch {}
@@ -86,7 +87,7 @@ function addGeneratedPuzzle(){
   $("totalCount").textContent="∞";
   selectPuzzle(puzzles.length-1);
 }
-\nfunction normalize(value) {
+function normalize(value) {
   return String(value||"").trim().toLowerCase()
     .replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d))
     .replace(/[٫،]/g,".").replace(/\s+/g,"")
