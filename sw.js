@@ -1,10 +1,12 @@
-const CACHE_NAME = "personal-dashboard-v6";
+const CACHE_NAME = "personal-dashboard-v7";
 const CACHE_PREFIX = "personal-dashboard-";
 const APP_SHELL = [
   "/",
   "/dashboard",
   "/finance",
   "/learning-plan",
+  "/games",
+  "/assets/games.js",
   "/manifest.webmanifest",
   "/assets/pwa.js",
   "/assets/offline-store.js",
@@ -33,6 +35,8 @@ function getNavigationCacheKey(url) {
     "/finance.html": "/finance",
     "/learning-plan": "/learning-plan",
     "/learning-plan.html": "/learning-plan",
+    "/games": "/games",
+    "/games.html": "/games",
     "/offline": "/offline",
     "/offline.html": "/offline"
   };
