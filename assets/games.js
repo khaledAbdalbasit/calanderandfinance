@@ -172,14 +172,35 @@ function renderVisualStage(p){
     stage.append(wrap);return;
   }
   if(p.visualType==="mystery"){
+    const file=node("div","case-file");
+    file.append(node("span","case-file-icon","🔎"),node("div","case-file-copy"));
+    file.querySelector(".case-file-copy").append(node("strong","","ملف القضية"),node("small","","اضغط على كل دليل لفحصه"));
+    file.append(node("span","case-stamp","قيد التحقيق"));
     const grid=node("div","clue-grid");
+    const counter=node("div","clue-counter","الأدلة المفحوصة: 0 / "+(p.clues||[]).length);
+    let inspected=0;
     (p.clues||[]).forEach(([icon,label],index)=>{
-      const card=node("div","clue-card");
-      card.append(node("strong","",icon),node("span","",label));
-      card.style.animationDelay=(index*70)+"ms";
+      const card=node("button","clue-card");
+      card.type="button";
+      card.setAttribute("aria-pressed","false");
+      card.setAttribute("aria-label","فحص الدليل: "+label);
+      const symbol=node("strong","clue-symbol",icon);
+      const copy=node("span","clue-copy",label);
+      const status=node("span","clue-status","افحص");
+      card.append(symbol,copy,status);
+      card.style.setProperty("--reveal-delay",(index*130)+"ms");
+      card.addEventListener("click",()=>{
+        const active=card.classList.toggle("inspected");
+        card.setAttribute("aria-pressed",String(active));
+        status.textContent=active?"تم الفحص":"افحص";
+        inspected+=active?1:-1;
+        counter.textContent="الأدلة المفحوصة: "+inspected+" / "+p.clues.length;
+        if(inspected===p.clues.length)file.classList.add("all-inspected");
+        else file.classList.remove("all-inspected");
+      });
       grid.append(card);
     });
-    stage.append(grid,node("div","visual-note","افحص الأدلة واحدة واحدة، ولا تتسرع في اتهام أي شخص"));
+    stage.append(file,grid,counter,node("div","visual-note","افحص الأدلة كلها، ثم كوّن استنتاجك واكتب إجابتك"));
     return;
   }
   if(p.visualType==="sequence"){
