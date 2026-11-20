@@ -153,7 +153,7 @@ function renderVisualStage(p){
     const beam=node("div","balance-beam");
     const base=node("div","balance-base");
     wrap.append(animals,beam,base);
-    const lines=p.question.split("\\n").filter(line=>line.includes("="));
+    const lines=p.question.split("\n").filter(line=>line.includes("="));
     lines.forEach(line=>{
       const row=node("div","visual-equation",line);
       row.dataset.items=["قطة","كلب","أرنب"].filter(name=>line.includes(name)).join("|");
@@ -167,7 +167,7 @@ function renderVisualStage(p){
     stage.append(wrap);return;
   }
   if(p.visualType==="sequence"){
-    const numbers=(p.question.match(/-?\\d+(?:\\.\\d+)?/g)||[]).slice(0,7);
+    const numbers=(p.question.match(/-?\d+(?:\.\d+)?/g)||[]).slice(0,7);
     const grid=node("div","visual-grid");
     numbers.forEach((number,i)=>grid.append(node("div","visual-tile",number)));
     grid.append(node("div","visual-tile missing","?"));
@@ -176,7 +176,7 @@ function renderVisualStage(p){
   }
   if(p.visualType==="equation"){
     const equations=node("div","visual-equations");
-    const lines=p.question.split("\\n").filter(line=>line.includes("="));
+    const lines=p.question.split("\n").filter(line=>line.includes("="));
     lines.forEach(line=>{
       const row=node("div","visual-equation");
       const parts=line.split("=");
